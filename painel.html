@@ -453,7 +453,7 @@ async function pageMedia() {
       for (const m of heavy) { b.innerHTML = `<span class="spin"></span> ${++n} de ${heavy.length}…`; await optimizeExisting(m); }
       toast("Fotos otimizadas! A TV pega a versão nova em até 1 minuto.", 4000);
     } catch (ex) { toast(friendly(ex), 5000); }
-    pageMedia();
+    if (state.tab === "anuncios") pageMedia();
   });
   clearInterval(state.poll);
   state.poll = setInterval(async () => {
