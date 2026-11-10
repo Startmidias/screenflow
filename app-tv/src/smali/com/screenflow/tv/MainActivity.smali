@@ -2,7 +2,7 @@
 .super Landroid/app/Activity;
 .source "MainActivity.java"
 
-# ScreenFlow TV - tela inicial (launcher) em modo quiosque.
+# START PLAY TV - tela inicial (launcher) em modo quiosque.
 # Duas WebViews: "player" (anúncios) e "ui" (menu/configuração, por cima).
 
 .field public player:Landroid/webkit/WebView;

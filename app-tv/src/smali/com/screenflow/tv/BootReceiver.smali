@@ -2,7 +2,7 @@
 .super Landroid/content/BroadcastReceiver;
 .source "BootReceiver.java"
 
-# Reserva: abre o ScreenFlow quando o aparelho liga
+# Reserva: abre o START PLAY quando o aparelho liga
 # (o principal é o app ser a tela inicial).
 
 .method public constructor <init>()V

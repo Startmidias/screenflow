@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Start Play</title>
+<title>START PLAY</title>
 <style>
   :root{
     --bg:#0E1014; --panel:#161A21; --panel2:#1D222B; --line:#2A303B;
@@ -150,7 +150,7 @@
 <!-- INICIANDO -->
 <section id="s-boot" class="screen">
   <div class="center">
-    <img class="boot-img" src="logo.png" alt="Start Play">
+    <img class="boot-img" src="logo.png" alt="START PLAY">
     <div class="boot-sub" id="boot-sub" style="color:rgba(255,255,255,.85);margin-top:1.6rem">Iniciando…</div>
     <div class="dots"><i></i><i></i><i></i></div>
   </div>
@@ -160,12 +160,12 @@
 <section id="s-setup" class="screen opaque">
   <div class="pad">
     <div class="top">
-      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"></div>
       <div class="stat"><span class="clock" data-clock></span></div>
     </div>
     <div style="margin-top:2.4rem">
       <h1>Vamos ligar esta tela</h1>
-      <p class="lead">Conecte esta TV à internet. Assim que conectar, os anúncios do seu painel Start Play começam a passar sozinhos.</p>
+      <p class="lead">Conecte esta TV à internet. Assim que conectar, os anúncios do seu painel START PLAY começam a passar sozinhos.</p>
     </div>
     <div class="steps">
       <div class="step"><b>1 · Internet</b><span id="su-net"><i class="dot"></i>Verificando…</span></div>
@@ -188,7 +188,7 @@
   <div class="sheet">
     <div class="top">
       <div>
-        <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+        <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"></div>
       </div>
       <div class="stat"><span id="mn-net"><i class="dot"></i>…</span><span class="clock" data-clock></span></div>
     </div>
@@ -210,12 +210,12 @@
 <section id="s-url" class="screen opaque">
   <div class="pad">
     <div class="top">
-      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"></div>
       <div class="stat"><span class="clock" data-clock></span></div>
     </div>
     <div style="margin-top:2.2rem;max-width:48rem">
       <h2>Endereço do player</h2>
-      <p class="lead">É o link da página do player do seu painel Start Play. A TV abre esse endereço sempre que ligar.</p>
+      <p class="lead">É o link da página do player do seu painel START PLAY. A TV abre esse endereço sempre que ligar.</p>
       <div class="field">
         <label for="url-in">Link (aperte OK para abrir o teclado)</label>
         <input id="url-in" class="input" data-f type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://seu-painel.vercel.app/player/">
@@ -223,7 +223,7 @@
       </div>
       <div class="tiles w3" style="margin-top:.6rem">
         <button class="tile primary" data-f data-act="url-save"><div class="ic"><svg><use xlink:href="#i-check"/></svg></div><div class="tx"><div class="t1">Salvar e abrir</div><div class="t2">Começa a passar os anúncios</div></div></button>
-        <button class="tile" data-f data-act="url-clear"><div class="ic"><svg><use xlink:href="#i-reload"/></svg></div><div class="tx"><div class="t1">Usar o padrão</div><div class="t2">startmidias.github.io/screenflow</div></div></button>
+        <button class="tile" data-f data-act="url-clear"><div class="ic"><svg><use xlink:href="#i-reload"/></svg></div><div class="tx"><div class="t1">Usar o padrão</div><div class="t2">Endereço padrão do START PLAY</div></div></button>
         <button class="tile" data-f data-act="back"><div class="ic"><svg><use xlink:href="#i-back"/></svg></div><div class="tx"><div class="t1">Voltar</div><div class="t2">Sem salvar</div></div></button>
       </div>
     </div>
@@ -234,7 +234,7 @@
 <section id="s-apps" class="screen opaque">
   <div class="pad">
     <div class="top">
-      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="sep"></span>Aplicativos</div>
+      <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"><span class="sep"></span>Aplicativos</div>
       <div class="stat"><span class="small">Escolha e aperte OK · <kbd>VOLTAR</kbd> sai</span><span class="clock" data-clock></span></div>
     </div>
     <div class="scroll" id="apps-scroll"><div class="scroll-in tiles w4" id="apps-list"></div></div>
@@ -245,7 +245,7 @@
 <section id="s-info" class="screen opaque">
   <div class="pad">
     <div class="top">
-      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="sep"></span>Informações</div>
+      <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"><span class="sep"></span>Informações</div>
       <div class="stat"><span class="clock" data-clock></span></div>
     </div>
     <div class="rows" id="info-rows"></div>
@@ -262,7 +262,7 @@
 <section id="s-offline" class="screen opaque">
   <div class="pad">
     <div class="top">
-      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"></div>
       <div class="stat"><span id="off-net"><i class="dot"></i>…</span><span class="clock" data-clock></span></div>
     </div>
     <div style="margin-top:3rem">
@@ -294,7 +294,7 @@
     stop:function(){}, clearCache:function(){ log("clearCache") }, toast:function(t){ log("toast "+t) },
     intentUrl:function(){ return "" }, openSettings:function(a){ log("settings "+a); return true },
     launch:function(p){ log("launch "+p); return true },
-    info:function(){ return JSON.stringify({model:"MXQ Pro 4K 5G",maker:"rockchip",hw:"rk30board",android:"7.1.2",sdk:25,w:1920,h:1080,dpi:240,version:"1.0.0",home:"com.screenflow.tv",self:"com.screenflow.tv",net:"WIFI",online:true,ssid:"\"Loja Centro 5G\"",ip:"192.168.0.25 (wlan0)"}) },
+    info:function(){ return JSON.stringify({model:"MXQ Pro 4K 5G",maker:"rockchip",hw:"rk30board",android:"7.1.2",sdk:25,w:1920,h:1080,dpi:240,version:"1.3.0",home:"com.screenflow.tv",self:"com.screenflow.tv",net:"WIFI",online:true,ssid:"\"Loja Centro 5G\"",ip:"192.168.0.25 (wlan0)"}) },
     apps:function(){ return JSON.stringify([
       {pkg:"com.google.android.youtube.tv",label:"YouTube",cat:"android.intent.category.LEANBACK_LAUNCHER"},
       {pkg:"com.android.chrome",label:"Chrome",cat:"android.intent.category.LAUNCHER"},
@@ -303,7 +303,7 @@
       {pkg:"com.mbox.launcher",label:"MBox Launcher",cat:"android.intent.category.HOME"},
       {pkg:"com.android.music",label:"Música",cat:"android.intent.category.LAUNCHER"},
       {pkg:"com.android.gallery3d",label:"Galeria",cat:"android.intent.category.LAUNCHER"},
-      {pkg:"com.screenflow.tv",label:"Start Play",cat:"android.intent.category.HOME"}]) }
+      {pkg:"com.screenflow.tv",label:"START PLAY",cat:"android.intent.category.HOME"}]) }
   };
   function log(t){ if(window.console) console.log("[TV] "+t) }
   function call(fn, dflt){ try { var r = fn(); return (r === undefined || r === null) ? dflt : r } catch(e){ return dflt } }
@@ -548,7 +548,7 @@
     var ip = (i.ip || "").split(" ")[0];
     $("mn-ip").textContent = ip ? ("IP " + ip) : "IP, modelo, versão";
     var isHome = i.home && i.self && i.home === i.self;
-    $("inf-home-sub").textContent = isHome ? "Start Play já é a tela inicial" : "Hoje: " + (i.home || "não definida");
+    $("inf-home-sub").textContent = isHome ? "START PLAY já é a tela inicial" : "Hoje: " + (i.home || "não definida");
     var rows = [
       ["Aparelho", [i.maker, i.model].filter(Boolean).join(" ") || "—"],
       ["Android", (i.android || "—") + (i.sdk ? "  (API " + i.sdk + ")" : "")],
@@ -556,7 +556,7 @@
       ["Rede", netTxt],
       ["Endereço IP", i.ip || "—"],
       ["Player", u ? u : "Não configurado"],
-      ["Tela inicial", isHome ? "Start Play ✓" : (i.home || "—")],
+      ["Tela inicial", isHome ? "START PLAY ✓" : (i.home || "—")],
       ["Versão do app", (i.version || "—") + (i.hw ? "  ·  " + i.hw : "")]
     ];
     $("info-rows").innerHTML = rows.map(function(r){ return '<div class="r"><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span></div>' }).join("");

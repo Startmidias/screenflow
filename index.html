@@ -3,12 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Start Play · Player</title>
+<title>START PLAY · Player</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  html{font-size:calc(100vh / 36)}
-  html,body{height:100%;overflow:hidden;background:#000;color:#fff;cursor:none;
+  html{font-size:30px}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#fff;cursor:none;
     font-family:Roboto,"Noto Sans",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  #root{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;background:#000;
+    -webkit-transform-origin:0 0;transform-origin:0 0}
+  #stage{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;background:#000}
+
+  /* anúncios */
   .layer{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;overflow:hidden;
     -webkit-transition:opacity .6s ease;transition:opacity .6s ease;background:#000}
   .layer.on{opacity:1}
@@ -16,222 +21,660 @@
     -webkit-filter:blur(2.2rem) brightness(.55);filter:blur(2.2rem) brightness(.55)}
   .layer img,.layer video,.layer canvas{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:block}
   .layer video{background:#000}
-  #msg{position:absolute;left:0;top:0;width:100%;height:100%;display:none;
+
+  /* telas cheias (mensagem e "Anuncie aqui") */
+  .full{position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:hidden;
     background:#FC0491;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9)}
-  #msg.on{display:block}
-  .box{position:absolute;left:6rem;right:6rem;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%)}
-  .logo img{height:3.2rem;width:auto;display:block;margin-bottom:2.4rem}
+  .full.on{display:block}
+  .box{position:absolute;left:3.5rem;right:3.5rem;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%)}
+  .logo{height:3.2rem;width:auto;display:block;margin-bottom:2.2rem}
   h1{font-size:2.6rem;font-weight:700;line-height:1.15}
-  p{color:rgba(255,255,255,.85);font-size:1.2rem;line-height:1.45;margin-top:.8rem;max-width:44rem}
+  p{color:rgba(255,255,255,.88);font-size:1.2rem;line-height:1.45;margin-top:.8rem;max-width:44rem}
   .code{display:inline-block;margin-top:2rem;padding:.7rem 1.2rem;border-radius:.7rem;background:rgba(0,0,0,.28);
     border:1px solid rgba(255,255,255,.18);font-size:1.05rem;color:#fff}
   .code b{letter-spacing:.08em}
-  #net{position:absolute;right:1.2rem;bottom:1rem;font-size:.75rem;color:#fff;background:rgba(0,0,0,.55);padding:.3rem .7rem;border-radius:1rem;display:none;z-index:5}
+  .code .pair{display:block;font-size:3.4rem;font-weight:800;letter-spacing:.22em;margin-top:.4rem}
+  #house .box{text-align:center}
+  #house .logo{margin:0 auto 1.8rem;height:3rem}
+  #house .k{font-size:1.15rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.85)}
+  #house .big{font-size:4.2rem;font-weight:800;line-height:1.05;margin-top:.6rem}
+  #house .tel{display:inline-block;margin-top:2rem;padding:.6rem 1.6rem;border-radius:3rem;background:#fff;color:#1D02A9;
+    font-size:2.1rem;font-weight:800;letter-spacing:.02em}
+  #house p{margin:1.4rem auto 0;text-align:center}
+
+  /* rodapé: notícias e chamada comercial se revezam na mesma área */
+  #band{position:absolute;left:0;bottom:0;width:100%;height:2.6rem;display:none;background:#07070C;overflow:hidden}
+  #band.on{display:block}
+  #band .ln{position:absolute;left:0;top:0;width:100%;height:.12rem;z-index:5;
+    background:#FC0491;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9)}
+  #b-news,#b-promo{position:absolute;left:0;top:0;height:100%;right:4rem;-webkit-transition:opacity .5s ease;transition:opacity .5s ease}
+  #b-promo{opacity:0;z-index:3;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+    padding:0 1.2rem;background:#C4067E;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9)}
+  #band[data-seg=promo] #b-promo{opacity:1}
+  #band[data-seg=promo] #b-news{opacity:0}
+  #b-promo img{height:1.35rem;width:auto;margin-right:1rem;-webkit-flex-shrink:0;flex-shrink:0}
+  #b-promo-t{font-size:1.32rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #b-lbl{position:absolute;left:0;top:0;height:100%;padding:0 1rem;z-index:2;display:-webkit-flex;display:flex;
+    -webkit-align-items:center;align-items:center;font-size:1.05rem;font-weight:800;letter-spacing:.09em;white-space:nowrap;
+    background:#C4067E;background:-webkit-linear-gradient(left,#FC0491,#6A0BC4);background:linear-gradient(90deg,#FC0491,#6A0BC4)}
+  #b-run{position:absolute;top:0;height:100%;left:7rem;right:0;overflow:hidden}
+  #b-clock{position:absolute;right:0;top:0;height:100%;width:4rem;z-index:4;display:-webkit-flex;display:flex;
+    -webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+    font-size:1.2rem;font-weight:700;background:#15151F;color:#fff;white-space:nowrap}
+  .bi{position:absolute;left:0;top:0;height:100%;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;
+    white-space:nowrap;font-size:1.32rem;font-weight:600;color:#fff;padding-right:1.4rem;will-change:transform;
+    -webkit-transform:translateX(200rem);transform:translateX(200rem)}
+  .bi b{color:#FFD23F;font-weight:800}
+  .bi i{font-style:normal;color:#FFD23F;margin:0 .45rem}
+  .bi .dot{display:inline-block;width:.4rem;height:.4rem;border-radius:50%;background:#FC0491;margin-left:1.4rem}
+
+  #net{position:absolute;right:.8rem;top:.8rem;font-size:.6rem;color:#fff;background:rgba(0,0,0,.45);padding:.2rem .5rem;border-radius:1rem;display:none;z-index:5;opacity:.75}
   #net.on{display:block}
-  #ident{position:absolute;left:0;top:0;width:100%;height:100%;display:none;z-index:9;text-align:center;
-    background:rgba(10,4,30,.82)}
-  #ident.on{display:block}
+  #ident{position:absolute;left:0;top:0;width:100%;height:100%;display:none;z-index:9;text-align:center;background:rgba(10,4,30,.85)}
   #ident .box{text-align:center}
   #ident .big{font-size:5rem;font-weight:800;letter-spacing:.06em;margin-top:1rem}
+  #sleep{position:absolute;left:0;top:0;width:100%;height:100%;background:#000;display:none;z-index:20}
+  #sleep.on{display:block}
+  #sleep .pv{position:absolute;left:0;right:0;top:50%;text-align:center;color:#8C8CA0;font-size:1.1rem;-webkit-transform:translateY(-50%);transform:translateY(-50%)}
 </style>
 </head>
 <body>
-<div class="layer" id="L0"></div>
-<div class="layer" id="L1"></div>
-<div id="msg">
-  <div class="box">
-    <div class="logo"><img src="logo.png" alt="Start Play"></div>
-    <h1 id="msg-t">Conectando…</h1>
-    <p id="msg-p"></p>
-    <div class="code" id="msg-c" style="display:none"></div>
+<div id="root">
+  <div id="stage">
+    <div class="layer" id="L0"></div>
+    <div class="layer" id="L1"></div>
+    <div class="full" id="house"><div class="box">
+      <img class="logo" src="logo.png" alt="START PLAY">
+      <div class="k">Sua marca nesta tela</div>
+      <div class="big">Anuncie aqui</div>
+      <div class="tel" id="house-tel"></div>
+      <p id="house-p"></p>
+    </div></div>
+    <div class="full" id="msg"><div class="box">
+      <img class="logo" src="logo.png" alt="START PLAY">
+      <h1 id="msg-t">Conectando…</h1>
+      <p id="msg-p"></p>
+      <div class="code" id="msg-c" style="display:none"></div>
+    </div></div>
+    <div id="ident"><div class="box"><h1 id="ident-n"></h1><div class="big" id="ident-c"></div><p style="margin:1rem auto 0">Esta é a tela que você está identificando no painel START PLAY.</p></div></div>
+    <div id="net">offline · passando o que já foi baixado</div>
   </div>
+  <div id="band">
+    <div class="ln"></div>
+    <div id="b-news"><div id="b-lbl">NOTÍCIAS</div><div id="b-run"></div></div>
+    <div id="b-promo"><img src="logo.png" alt=""><span id="b-promo-t"></span></div>
+    <div id="b-clock"></div>
+  </div>
+  <div id="sleep"><div class="pv" id="sleep-t"></div></div>
 </div>
-<div id="ident"><div class="box"><h1 id="ident-n"></h1><div class="big" id="ident-c"></div><p style="margin:1rem auto 0">Esta é a tela que você está identificando no painel.</p></div></div>
-<div id="net">sem internet · passando o que já foi baixado</div>
 
 <script src="config.js"></script>
+<script src="agenda.js"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "2.1.0";
-  var CFG = window.SCREENFLOW || {};
-  var SYNC_MS = 60000;
+  var VERSION = "3.0.0";
+  var CFG = window.STARTPLAY || window.SCREENFLOW || {};
+  var A = window.SPAgenda;
+  var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
+  var QS = (function(){ var o = {}; location.search.replace(/[?&]([^=&]+)=?([^&]*)/g, function(_, k, v){ o[decodeURIComponent(k)] = decodeURIComponent(v) }); return o })();
+  var PREVIEW = QS.preview || null;          // prévia do painel: não registra tela nem exibições
+  var SYNC_MS = PREVIEW ? 20000 : 60000;
+  var NEWS_MS = 5 * 60000;
+  var NEWS_MAX_AGE = 24 * 3600000;
   var IMG_TIMEOUT = 25000;
-  var MAX_PIXELS = 16000000; // acima disso a TV Box pode travar
-  var S = { id:null, name:"", items:[], idx:-1, layer:0, timer:null, cur:null, started:0, online:true,
-            muted:false, applied:false, skips:0, ok:0, err:0, lastErr:"", lastErrAt:null, boot:Date.now(), token:0 };
+  var MAX_PIXELS = 16000000;
+  var SPEEDS = [2.0, 2.7, 3.4, 4.3, 5.4];   // velocidade da faixa, em "rem" por segundo
+  var S = { id:null, name:"", cfg:null, items:[], prog:null, key:null, pend:null, idx:-1, layer:0, timer:null, cur:null, started:0,
+            online:true, offlineSince:null, muted:false, skips:0, ok:0, err:0, lastErr:"", lastErrAt:null, boot:Date.now(),
+            token:0, skew:0, sleeping:false, override:null, ovNews:null, cfgKey:"", failAt:{} };
+  var T = { items:[], at:0, ids:"", timer:null, k:0, plan:null, seg:null, segTimer:null, els:[], nextAt:0, pump:null,
+            paused:false, pauseAt:0, err:null };
+  var G = { W:0, H:0, RW:0, RH:0, rem:30, bh:0, rot:0 };
+  var M = { on:!!(window.caches && window.isSecureContext && !PREVIEW), name:"sp-media-v1", busy:false, ready:{}, bad:{} };
+  var Q = { key:"sp_queue", busy:false, timer:null };
+  // quais formatos de imagem este aparelho abre (alguns TV Box não abrem JPEG)
+  var FMT = {};
+  (function(){
+    var t = { jpeg:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDlqKKK7z9lP//Z",
+              webp:"data:image/webp;base64,UklGRjgAAABXRUJQVlA4ICwAAABwAQCdASoIAAgAAUAmJaACdAGIQAD+7v+d0n6n+i/+9gv/92C//3YL/WwAAA==",
+              png:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFklEQVR4XmO8I1fBgA0wYRVlYBikEgAlpwGCMBApOgAAAABJRU5ErkJggg==" };
+    Object.keys(t).forEach(function(k){
+      var im = new Image();
+      im.onload = function(){ FMT[k] = im.naturalWidth === 8 };
+      im.onerror = function(){ FMT[k] = false };
+      im.src = t[k];
+    });
+  })();
 
   function $(id){ return document.getElementById(id) }
   function ls(k, v){ try { if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch(e){ return null } }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c] }) }
-  function two(n){ return (n < 10 ? "0" : "") + n }
-  function today(){ var d = new Date(); return d.getFullYear() + "-" + two(d.getMonth()+1) + "-" + two(d.getDate()) }
+  function log(m){ if(window.console) console.log("[player] " + m) }
+  function uuid(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    var b = [], i;
+    for(i = 0; i < 16; i++) b.push(window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(1))[0] : Math.floor(Math.random() * 256));
+    b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    var h = b.map(function(x){ return (x < 16 ? "0" : "") + x.toString(16) }).join("");
+    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+  }
 
-  // identidade fixa desta TV
-  S.id = ls("sf_screen");
-  if(!S.id){
-    var c = "abcdefghjkmnpqrstuvwxyz23456789", r = "tv-";
-    for(var i = 0; i < 12; i++) r += c.charAt(Math.floor(Math.random() * c.length));
-    S.id = r; ls("sf_screen", r);
+  // identidade fixa desta TV (a prévia usa a tela escolhida no painel)
+  if(PREVIEW){ S.id = PREVIEW }
+  else {
+    S.id = ls("sf_screen");
+    if(!S.id){
+      var c = "abcdefghjkmnpqrstuvwxyz23456789", r = "tv-";
+      for(var i = 0; i < 12; i++) r += c.charAt(Math.floor(Math.random() * c.length));
+      S.id = r; ls("sf_screen", r);
+    }
   }
   var CODE = S.id.slice(-6).toUpperCase();
-  // conta quantas vezes o player abriu (ajuda a descobrir travamentos)
-  var boots = (parseInt(ls("sf_boots") || "0", 10) || 0) + 1; ls("sf_boots", String(boots));
+  var boots = PREVIEW ? 0 : (parseInt(ls("sf_boots") || "0", 10) || 0) + 1;
+  if(!PREVIEW) ls("sf_boots", String(boots));
 
+  // ---------- configuração ----------
+  function merge(a, b){ var o = {}, k; for(k in a) o[k] = a[k]; for(k in b) o[k] = b[k]; return o }
+  function scr(){ var s = (S.cfg && S.cfg.screen) || {}; return S.override ? merge(s, S.override) : s }
+  function sets(){ return (S.cfg && S.cfg.settings) || {} }
+  function exceptions(){ return (S.cfg && S.cfg.exceptions) || [] }
+  function newsIds(){
+    var list = S.ovNews || (S.cfg && S.cfg.news) || [], out = [];
+    for(var i = 0; i < list.length; i++) if(list[i] && list[i].id) out.push(list[i].id);
+    return out;
+  }
+  function tickerCfg(){ return scr().ticker || {} }
+  function newsOn(){ return !!(tickerCfg().enabled && newsIds().length) }
+  function promoText(){ return scr().promo_text || sets().promo_text || "" }
+  function promoOn(){ return scr().promo !== false && !!promoText() }
+  function parts(){ return A.nowParts(sets().tz, Date.now() + S.skew) }
+  function power(){ return window.TV && typeof TV.powerOff === "function" ? "fisico" : "visual" }
+
+  // ---------- desenho da tela (horizontal ou vertical) ----------
+  function bandPlan(){
+    if(S.sleeping || !S.cfg) return null;
+    if(scr().added === false && !PREVIEW) return null;
+    var n = newsOn() && T.items.length > 0, p = promoOn();
+    return n && p ? "both" : n ? "news" : p ? "promo" : null;
+  }
+  function layout(){
+    var W = window.innerWidth || 1920, H = window.innerHeight || 1080;
+    var o = scr().orientation || "landscape", rot = 0;
+    if((o === "portrait" || o === "portrait_ccw") && W > H) rot = o === "portrait" ? 90 : -90;
+    var RW = rot ? H : W, RH = rot ? W : H;
+    var rem = Math.max(8, Math.min(W, H) / 36);
+    document.documentElement.style.fontSize = rem + "px";
+    var root = $("root");
+    root.style.width = RW + "px"; root.style.height = RH + "px";
+    var tf = rot === 90 ? "translate(" + W + "px,0) rotate(90deg)" : rot === -90 ? "translate(0," + H + "px) rotate(-90deg)" : "none";
+    root.style.webkitTransform = tf; root.style.transform = tf;
+    var bh = bandPlan() ? Math.round(rem * 2.6) : 0;
+    $("stage").style.height = (RH - bh) + "px";
+    var resized = G.RW !== RW || G.RH !== RH || G.rem !== rem;
+    G = { W:W, H:H, RW:RW, RH:RH, rem:rem, bh:bh, rot:rot };
+    return resized;
+  }
+  window.addEventListener("resize", function(){ if(layout()){ resetNews(); T.plan = null; refreshBand() } });
+
+  // ---------- mensagens ----------
   function msg(t, p, showCode){
     $("msg-t").textContent = t; $("msg-p").textContent = p || "";
     $("msg-c").style.display = showCode ? "inline-block" : "none";
-    $("msg-c").innerHTML = 'Esta tela: <b>' + esc(S.name || "Nova tela") + '</b> · código <b>' + CODE + '</b>';
-    $("msg").className = "on";
+    $("msg-c").innerHTML = (S.cfg && scr().added === false) || !S.name || S.name === "Nova tela"
+      ? 'Código de pareamento<b class="pair">' + CODE + '</b>'
+      : 'Esta tela: <b>' + esc(S.name) + '</b> · código <b>' + CODE + '</b>';
+    $("house").className = "full"; $("msg").className = "full on";
   }
-  function hideMsg(){ $("msg").className = "" }
+  function hideMsg(){ $("msg").className = "full"; $("house").className = "full" }
+  // sem anúncio agora: a tela vende o próprio espaço
+  function idle(){
+    if(S.cfg && scr().added === false && !PREVIEW){
+      msg("Tela pronta", "Para parear: no painel START PLAY, abra Telas → Adicionar tela e digite o código abaixo.", true); return;
+    }
+    var st = sets();
+    $("house-tel").textContent = "WhatsApp " + (st.phone || "(65) 99328-8233");
+    $("house-p").textContent = PREVIEW && !S.items.length ? "Nenhum anúncio no ar para esta tela agora." : (st.company || "START PLAY") + " · mídia indoor";
+    $("msg").className = "full"; $("house").className = "full on";
+  }
   function fail(what, item){
     S.err++; S.lastErr = what + (item ? ": " + item.title : ""); S.lastErrAt = new Date().toISOString();
-    if(window.console) console.log("[player] " + S.lastErr);
+    log(S.lastErr);
   }
 
-  function rpc(fn, body){
+  // ---------- servidor ----------
+  function sessionToken(){
+    try {
+      var ref = (BASE.match(/^https?:\/\/([^.]+)\./) || [])[1];
+      var v = JSON.parse(localStorage.getItem("sb-" + ref + "-auth-token") || "null");
+      return v && (v.access_token || (v.currentSession && v.currentSession.access_token)) || null;
+    } catch(e){ return null }
+  }
+  function rpc(fn, body, token){
     var h = { "apikey":CFG.supabaseKey, "Content-Type":"application/json" };
-    if(/^eyJ/.test(CFG.supabaseKey)) h.Authorization = "Bearer " + CFG.supabaseKey;
-    return fetch(CFG.supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/" + fn, { method:"POST", headers:h, body:JSON.stringify(body) })
+    var auth = token || (/^eyJ/.test(CFG.supabaseKey || "") ? CFG.supabaseKey : null);
+    if(auth) h.Authorization = "Bearer " + auth;
+    return fetch(BASE + "/rest/v1/rpc/" + fn, { method:"POST", headers:h, body:JSON.stringify(body) })
       .then(function(r){
         if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + " " + t) });
         return r.status === 204 ? null : r.json();
       });
   }
-
   function deviceInfo(){
     var info = { ua:navigator.userAgent.slice(0, 200), w:screen.width, h:screen.height, dpr:window.devicePixelRatio || 1 };
-    try { if(window.TV && TV.info){ var t = JSON.parse(TV.info()); info.model = t.model; info.android = t.android; info.ip = t.ip } } catch(e){}
+    try { if(window.TV && TV.info){ var t = JSON.parse(TV.info()); info.model = t.model; info.android = t.android; info.ip = t.ip; if(t.app) info.app = t.app } } catch(e){}
     return info;
   }
   function status(){
     var st = { v:VERSION, boots:boots, up:Math.round((Date.now() - S.boot) / 1000), n:S.items.length,
                now:S.cur ? S.cur.title : null, ok:S.ok, err:S.err, online:S.online,
-               vw:window.innerWidth, vh:window.innerHeight };
+               vw:window.innerWidth, vh:window.innerHeight, rot:G.rot, sleep:S.sleeping, power:power(),
+               prog:S.prog, band:T.plan || null, news:T.items.length, queue:qLoad().length, cache:M.on, fmt:FMT };
+    if(S.pend) st.pending = { prog:S.pend.prog, total:S.pend.need.length, done:S.pend.done };
+    if(T.err) st.newsErr = String(T.err).slice(0, 120);
     if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 240); st.lastErrAt = S.lastErrAt }
     if(S.fallback) st.fallback = S.fallback;
-    if(performance && performance.memory) st.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+    if(window.performance && performance.memory) st.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
     return st;
   }
 
-  // ---------- sincronização ----------
+  function goOffline(){
+    if(S.online){ S.online = false; S.offlineSince = Date.now() }
+    if(S.items.length && !PREVIEW) $("net").className = "on";
+  }
+  function goOnline(){
+    S.online = true; S.offlineSince = null; $("net").className = "";
+    flush();
+  }
+
   function sync(first){
-    if(!CFG.supabaseUrl || CFG.supabaseUrl.indexOf("COLE_") === 0){
-      msg("Falta configurar o site", "Preencha o arquivo config.js com os dados do Supabase."); return;
-    }
-    rpc("sf_sync", { p_screen:S.id, p_today:today(), p_info: first ? deviceInfo() : {}, p_status:status() })
-      .then(function(d){
-        S.online = true; $("net").className = "";
-        S.name = (d && d.screen && d.screen.name) || "";
+    if(!BASE || BASE.indexOf("COLE_") === 0){ msg("Falta configurar o site", "Preencha o arquivo config.js."); return }
+    var t0 = Date.now();
+    var call = PREVIEW
+      ? rpc("sf_preview", { p_screen:PREVIEW }, sessionToken())
+      : rpc("sf_sync", { p_screen:S.id, p_today:parts().ymd, p_info: first ? deviceInfo() : {}, p_status:status() });
+    call.then(function(d){
+        goOnline();
+        var st = d && Date.parse(d.server_time);
+        if(st && isFinite(st)) S.skew = st - (t0 + Date.now()) / 2;
         if(d && d.command) command(d.command);
-        var items = (d && d.items) || [];
-        ls("sf_last", JSON.stringify({ name:S.name, items:items }));
-        apply(items);
+        var cfg = {}; for(var k in d) if(k !== "items" && k !== "command") cfg[k] = d[k];
+        S.cfg = cfg;
+        S.name = (cfg.screen && cfg.screen.name) || "";
+        onConfig();
+        receive((d && d.items) || [], d && d.prog);
       })
       ["catch"](function(e){
-        S.online = false;
-        if(window.console) console.log("sync falhou", e);
-        if(!S.items.length){
-          var last = null; try { last = JSON.parse(ls("sf_last") || "null") } catch(x){}
-          if(last && last.items && last.items.length){ S.name = last.name; apply(last.items) }
-          else msg("Sem conexão com o servidor", "Confira a internet desta TV. Vou tentar de novo em 1 minuto.", true);
-        }
-        if(S.items.length) $("net").className = "on";
+        goOffline();
+        log("sync falhou " + (e && e.message));
+        if(PREVIEW && !S.cfg){ msg("Prévia indisponível", "Entre no painel START PLAY com a conta de administrador e abra a prévia de novo."); return }
+        if(!S.cfg && !restore()) msg("Sem conexão com o servidor", "Confira a internet desta TV. Vou tentar de novo em 1 minuto.", true);
       });
+  }
+  // última programação que ficou pronta nesta TV (para ligar sem internet)
+  function restore(){
+    var last = null; try { last = JSON.parse(ls("sf_last") || "null") } catch(x){}
+    if(!last || !last.cfg) return null;
+    S.cfg = last.cfg; S.skew = last.skew || 0; S.name = (last.cfg.screen || {}).name || "";
+    onConfig();
+    commit({ items:last.items || [], prog:last.prog || null, key:last.key || null, need:[], done:0 }, true);
+    if(S.items.length) $("net").className = "on";
+    return last;
+  }
+
+  // aplica mudanças de configuração (vindas do servidor ou da prévia do painel)
+  function onConfig(){
+    if(layout()) resetNews();
+    var key = JSON.stringify([tickerCfg(), newsIds(), scr().promo, promoText(), sets().news_seconds, sets().promo_seconds]);
+    if(key !== S.cfgKey){ S.cfgKey = key; loadNews(); resetNews(); T.plan = null }
+    checkHours();
+    refreshBand();
   }
 
   function command(c){
-    if(c === "reload"){ setTimeout(function(){ location.reload() }, 300) }
+    if(PREVIEW) return;
+    if(c === "reload"){ interrupt("recarregada pelo painel"); setTimeout(function(){ location.reload() }, 300) }
     else if(c === "identify"){
       $("ident-n").textContent = S.name || "Nova tela"; $("ident-c").textContent = CODE;
-      $("ident").className = "on";
-      setTimeout(function(){ $("ident").className = "" }, 15000);
+      $("ident").style.display = "block";
+      setTimeout(function(){ $("ident").style.display = "" }, 15000);
     }
   }
 
-  // procura versão nova do player a cada 5 minutos e recarrega sozinho
   function checkVersion(){
     fetch("version.txt?t=" + Date.now(), { cache:"no-store" })
       .then(function(r){ return r.ok ? r.text() : "" })
-      .then(function(v){ v = (v || "").replace(/\s+/g, ""); if(v && v !== VERSION) location.reload() })
+      .then(function(v){ v = (v || "").replace(/\s+/g, ""); if(v && v !== VERSION){ interrupt("player atualizado"); location.reload() } })
       ["catch"](function(){});
   }
 
-  function sameList(a, b){
-    if(a.length !== b.length) return false;
-    for(var i = 0; i < a.length; i++) if(a[i].id !== b[i].id || a[i].url !== b[i].url || a[i].duration !== b[i].duration) return false;
-    return true;
+  // ---------- programação: só troca depois que os arquivos estão no aparelho ----------
+  function sig(it){ return [it.id, it.url, it.duration, String(it.days || ""), it.from || "", it.to || "", it.starts_on || "", it.ends_on || ""].join("|") }
+  function keyOf(items){ var s = ""; for(var i = 0; i < items.length; i++) s += sig(items[i]) + ";"; return s }
+  function receive(items, prog){
+    var key = keyOf(items);
+    if(S.pend && S.pend.key === key) return;                       // já está baixando esta
+    if(!S.pend && S.key === key){ S.prog = prog || S.prog; return } // já é a que está passando
+    var p = { items:items, prog:prog || null, key:key, need:[], done:0, since:Date.now() };
+    // primeira vez (ou TV sem nada passando): começa já e baixa enquanto toca
+    if(!M.on || S.key == null || !S.items.length){ commit(p); if(M.on) prefetch(items); return }
+    for(var i = 0; i < items.length; i++) if(!M.ready[items[i].url] && p.need.indexOf(items[i].url) < 0) p.need.push(items[i].url);
+    if(!p.need.length){ commit(p); return }
+    S.pend = p;
+    downloadAll(p);
   }
-  function apply(items){
-    if(S.applied && sameList(items, S.items)) return;
-    S.applied = true;
-    var keep = {}; for(var k = 0; k < items.length; k++) keep[items[k].url] = 1;
-    for(var u in blobCache) if(!keep[u]){ URL.revokeObjectURL(blobCache[u]); delete blobCache[u] }
-    var wasEmpty = !S.items.length;
-    S.items = items;
-    if(!items.length){
-      stop();
-      msg("Tela pronta", "Nenhum anúncio no ar para esta tela agora. Cadastre no painel e ele aparece aqui em até 1 minuto.", true);
+  function commit(p, restored){
+    if(S.pend === p || !restored) S.pend = null;
+    S.items = p.items.filter(function(it){ return !M.bad[it.url] });
+    S.prog = p.prog; S.key = p.key || keyOf(p.items);
+    if(!PREVIEW && !restored) ls("sf_last", JSON.stringify({ cfg:S.cfg, items:p.items, prog:p.prog, key:S.key, skew:S.skew, at:Date.now() }));
+    if(!restored) cleanCache(p.items);
+    if(S.sleeping) return;
+    if(!S.cur) next();
+    // se já há um anúncio passando, a troca acontece no fim dele
+  }
+  function downloadAll(p){
+    if(M.busy) return;
+    M.busy = true;
+    (function step(){
+      if(S.pend !== p){ M.busy = false; if(S.pend) downloadAll(S.pend); return }
+      var url = null;
+      for(var i = 0; i < p.need.length; i++){ if(!M.ready[p.need[i]] && !M.bad[p.need[i]]){ url = p.need[i]; break } }
+      p.done = p.need.filter(function(u){ return M.ready[u] || M.bad[u] }).length;
+      if(!url){ M.busy = false; commit(p); return }
+      cachePut(url).then(step, function(e){
+        if(e && e.permanent){ M.bad[url] = true; fail("arquivo indisponível (" + e.message + ")", { title:url.split("/").pop() }); step() }
+        else if(Date.now() - p.since > 10 * 60000){
+          // 10 minutos sem conseguir baixar: troca mesmo assim e tenta esse arquivo direto da internet
+          fail("arquivo não baixou em 10 min (" + (e && e.message) + ")", { title:url.split("/").pop() });
+          M.busy = false; commit(p);
+        }
+        else { M.busy = false; setTimeout(function(){ if(S.pend === p) downloadAll(p) }, 30000) }   // sem internet: tenta de novo
+      });
+    })();
+  }
+  function prefetch(items){
+    var list = items.map(function(it){ return it.url }).filter(function(u){ return !M.ready[u] });
+    (function step(){ var u = list.shift(); if(u) cachePut(u).then(step, step) })();
+  }
+  function cachePut(url){
+    return caches.open(M.name).then(function(c){
+      return c.match(url).then(function(hit){
+        if(hit){ M.ready[url] = true; return }
+        return fetch(url, { mode:"cors" }).then(function(r){
+          if(!r.ok){ var e = new Error("HTTP " + r.status); e.permanent = r.status === 404 || r.status === 403 || r.status === 400; throw e }
+          return c.put(url, r).then(function(){ M.ready[url] = true });
+        });
+      });
+    });
+  }
+  function cleanCache(items){
+    if(!M.on) return;
+    var keep = {}; items.forEach(function(it){ keep[it.url] = 1 });
+    if(S.pend) S.pend.items.forEach(function(it){ keep[it.url] = 1 });
+    caches.open(M.name).then(function(c){
+      return c.keys().then(function(ks){ ks.forEach(function(rq){ if(!keep[rq.url]){ c["delete"](rq); delete M.ready[rq.url] } }) });
+    })["catch"](function(){});
+  }
+  function scanCache(){
+    if(!M.on) return Promise.resolve();
+    return caches.open(M.name).then(function(c){ return c.keys() })
+      .then(function(ks){ ks.forEach(function(rq){ M.ready[rq.url] = true }) })["catch"](function(){});
+  }
+  // arquivo guardado no aparelho (quando houver)
+  function localBlob(url){
+    if(!M.on || !M.ready[url]) return Promise.resolve(null);
+    return caches.match(url).then(function(r){ return r ? r.blob() : null })["catch"](function(){ return null });
+  }
+
+  // ---------- registro do que foi reproduzido (fica guardado sem internet) ----------
+  function qLoad(){ try { return JSON.parse(ls(Q.key) || "[]") || [] } catch(e){ return [] } }
+  function qSave(a){ if(a.length > 5000) a = a.slice(a.length - 5000); ls(Q.key, JSON.stringify(a)) }
+  function record(item, st, secs, why){
+    if(PREVIEW || !item || !item.id) return;
+    if(st === "failed"){ if(S.failAt[item.id] && Date.now() - S.failAt[item.id] < 600000) return; S.failAt[item.id] = Date.now() }
+    var a = qLoad(), ev = { id:uuid(), media:item.id, at:new Date((st === "failed" ? Date.now() : S.started) + S.skew).toISOString(),
+      sec:Math.max(0, Math.round(secs || 0)), plan:item.kind === "video" ? null : (item.duration || 10), st:st, off:!S.online };
+    if(why) ev.why = String(why).slice(0, 180);
+    a.push(ev); qSave(a);
+    if(!Q.timer) Q.timer = setTimeout(function(){ Q.timer = null; flush() }, 3000);
+  }
+  function flush(){
+    if(PREVIEW || Q.busy || !S.online) return;
+    var a = qLoad(); if(!a.length) return;
+    var batch = a.slice(0, 200);
+    Q.busy = true;
+    rpc("sf_log_batch", { p_screen:S.id, p_events:batch })
+      .then(function(){
+        var sent = {}; batch.forEach(function(e){ sent[e.id] = 1 });
+        qSave(qLoad().filter(function(e){ return !sent[e.id] }));
+        Q.busy = false;
+        if(qLoad().length) setTimeout(flush, 500);
+      }, function(){ Q.busy = false; goOffline() });
+  }
+  // o anúncio atual foi cortado (fim do expediente, recarga, travamento)
+  function interrupt(why){
+    if(!S.cur) return;
+    var secs = (Date.now() - S.started) / 1000;
+    if(secs >= 1) record(S.cur, "interrupted", secs, why);
+    S.cur = null;
+  }
+  window.addEventListener("pagehide", function(){ interrupt("página fechada") });
+
+  // ---------- expediente ----------
+  function checkHours(){
+    if(!S.cfg) return;
+    var open = A.isOpen(scr().hours, exceptions(), parts());
+    if(!open && !S.sleeping){
+      interrupt("fim do expediente");
+      S.sleeping = true; stop(); hideMsg(); refreshBand();
+      $("sleep-t").textContent = PREVIEW ? "Fora do expediente: a TV fica apagada agora (espera visual)." : "";
+      $("sleep").className = "on";
+    } else if(open && S.sleeping){
+      S.sleeping = false; $("sleep").className = ""; layout(); loadNews(); refreshBand();
+      S.idx = -1; next();
+    }
+  }
+
+  // ---------- rodapé: notícias e chamada comercial ----------
+  function loadNews(){
+    clearTimeout(T.timer);
+    var ids = newsIds(), key = ids.join(",");
+    if(!tickerCfg().enabled || !ids.length){ T.items = []; T.ids = ""; T.err = null; refreshBand(); return }
+    if(key !== T.ids){
+      T.items = []; T.at = 0; T.k = 0; T.ids = key;
+      try { var c = JSON.parse(ls("sp_news") || "null");
+            if(c && c.ids === key && Date.now() - c.at < NEWS_MAX_AGE){ T.items = c.items || []; T.at = c.at } } catch(e){}
+    }
+    if(S.sleeping) return;
+    fetch(BASE + "/functions/v1/noticias?fontes=" + encodeURIComponent(key), { headers:{ "Authorization":"Bearer " + CFG.supabaseKey } })
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json() })
+      .then(function(d){
+        if(T.ids !== key) return;
+        var list = [], src = (d && d.itens) || [];
+        for(var i = 0; i < src.length; i++){
+          var it = src[i];
+          if(it && typeof it.t === "string" && it.t.length > 3 && typeof it.f === "string") list.push({ f:it.f, t:it.t });
+        }
+        T.items = list; T.at = Date.now(); T.err = null;
+        if(T.k >= list.length) T.k = 0;
+        if(!PREVIEW) ls("sp_news", JSON.stringify({ ids:key, at:T.at, items:list }));
+        T.timer = setTimeout(loadNews, NEWS_MS);
+        refreshBand();
+      })
+      ["catch"](function(e){
+        if(T.ids !== key) return;
+        T.err = e && e.message || "falhou";
+        log("notícias: " + T.err);
+        if(T.at && Date.now() - T.at > NEWS_MAX_AGE) T.items = [];   // passou de 24 h: não mostra notícia velha
+        T.timer = setTimeout(loadNews, T.items.length ? NEWS_MS : 60000);
+        refreshBand();
+      });
+  }
+
+  function refreshBand(){
+    var plan = bandPlan();
+    $("band").className = plan ? "on" : "";
+    layout();
+    if(plan !== T.plan){
+      T.plan = plan; clearTimeout(T.segTimer);
+      if(!plan){ resetNews(); T.seg = null; return }
+      if(plan === "promo"){ resetNews(); showSeg("promo"); return }
+      showSeg("news");
       return;
     }
-    if(wasEmpty || !S.cur) next();
-    // se a lista mudou, a troca acontece no fim do anúncio atual
+    if(plan && T.seg === "news" && !T.els.length && !T.paused) startNews();
+    if(T.seg === "promo") $("b-promo-t").textContent = promoText();
   }
+  function showSeg(seg){
+    clearTimeout(T.segTimer);
+    T.seg = seg;
+    $("band").setAttribute("data-seg", seg);
+    tickClock();
+    var st = sets();
+    if(seg === "promo"){
+      pauseNews();
+      $("b-promo-t").textContent = promoText();
+      if(T.plan === "both") T.segTimer = setTimeout(function(){ showSeg("news") }, (st.promo_seconds || 10) * 1000);
+    } else {
+      if(T.paused) resumeNews(); else if(!T.els.length) startNews();
+      if(T.plan === "both") T.segTimer = setTimeout(function(){ showSeg("promo") }, (st.news_seconds || 40) * 1000);
+    }
+  }
+  function resetNews(){
+    clearInterval(T.pump); T.pump = null;
+    for(var i = 0; i < T.els.length; i++){ var e = T.els[i]; try { if(e._a) e._a.cancel() } catch(x){} if(e.parentNode) e.parentNode.removeChild(e) }
+    T.els = []; T.paused = false;
+  }
+  function startNews(){
+    if(!(T.plan === "news" || T.plan === "both")) return;
+    $("b-lbl").textContent = "NOTÍCIAS";
+    $("b-run").style.left = $("b-lbl").offsetWidth + "px";
+    T.nextAt = now();
+    pump();
+    clearInterval(T.pump); T.pump = setInterval(pump, 1000);
+  }
+  function pauseNews(){
+    if(T.paused || !T.els.length){ clearInterval(T.pump); T.pump = null; return }
+    clearInterval(T.pump); T.pump = null;
+    T.paused = true; T.pauseAt = now();
+    T.els.forEach(function(e){ try { if(e._a) e._a.pause() } catch(x){} });
+  }
+  function resumeNews(){
+    if(!T.paused) return;
+    var d = now() - T.pauseAt;
+    T.paused = false; T.nextAt += d;
+    T.els.forEach(function(e){ try { if(e._a) e._a.play() } catch(x){} });
+    pump();
+    clearInterval(T.pump); T.pump = setInterval(pump, 1000);
+  }
+  function now(){ return (document.timeline && document.timeline.currentTime) || (window.performance && performance.now()) || Date.now() }
+  function speed(){ var s = parseInt(tickerCfg().speed, 10); s = s >= 1 && s <= 5 ? s : 3; return SPEEDS[s - 1] * G.rem }
+  // cada manchete entra pela direita logo depois da anterior; o navegador anima sozinho (leve para a TV Box)
+  function pump(){
+    if(T.paused || !T.items.length) return;
+    var run = $("b-run"), runW = run.offsetWidth, v = speed(), t = now(), guard = 0;
+    if(!runW || !v) return;
+    if(T.nextAt < t - 2000) T.nextAt = t;      // ficou para trás: recomeça sem amontoar
+    while(T.nextAt < t + 6000 && guard++ < 12){
+      var it = T.items[T.k % T.items.length]; T.k = (T.k + 1) % T.items.length;
+      var el = document.createElement("div");
+      el.className = "bi";
+      var b = document.createElement("b"); b.textContent = it.f; el.appendChild(b);
+      var bul = document.createElement("i"); bul.textContent = "•"; el.appendChild(bul);
+      el.appendChild(document.createTextNode(it.t));
+      var dot = document.createElement("span"); dot.className = "dot"; el.appendChild(dot);
+      run.appendChild(el);
+      var w = el.offsetWidth;
+      T.els.push(el);
+      animate(el, runW, -w, (runW + w) / v * 1000, T.nextAt, T.nextAt - t);
+      T.nextAt += w / v * 1000;
+    }
+  }
+  function animate(el, from, to, dur, startAt, delay){
+    function done(){ var k = T.els.indexOf(el); if(k >= 0) T.els.splice(k, 1); if(el.parentNode) el.parentNode.removeChild(el) }
+    if(el.animate){
+      var exact = !!(document.timeline && document.timeline.currentTime != null);
+      var a = el.animate([{ transform:"translateX(" + from + "px)" }, { transform:"translateX(" + to + "px)" }],
+                         { duration:dur, delay:exact ? 0 : Math.max(0, delay), easing:"linear", fill:"backwards" });
+      // começa exatamente quando a manchete anterior abriu espaço (sem depender de timers)
+      if(exact){ try { a.startTime = startAt } catch(x){} }
+      el._a = a; a.onfinish = done;
+    } else {
+      el.style.webkitTransform = el.style.transform = "translateX(" + from + "px)";
+      void el.offsetWidth;
+      el.style.webkitTransition = el.style.transition = "transform " + dur + "ms linear " + Math.max(0, delay) + "ms";
+      el.style.webkitTransform = el.style.transform = "translateX(" + to + "px)";
+      setTimeout(done, dur + delay + 50);
+    }
+  }
+  function tickClock(){ if(T.plan) $("b-clock").textContent = parts().hm }
 
   // ---------- reprodução ----------
+  function clearLayer(L){ L.innerHTML = ""; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
   function stop(){
     clearTimeout(S.timer); S.timer = null; S.cur = null; S.token++;
-    for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; L.innerHTML = "" }
+    for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; clearLayer(L) }
   }
 
-  function finish(){
+  function finish(how){
     if(S.cur){
-      var secs = Math.round((Date.now() - S.started) / 1000);
-      if(secs >= 2){ S.ok++; rpc("sf_log", { p_screen:S.id, p_media:S.cur.id, p_seconds:secs })["catch"](function(){}) }
+      var secs = (Date.now() - S.started) / 1000;
+      if(how === "stalled") record(S.cur, "interrupted", secs, "vídeo travou");
+      else if(secs >= 2){ S.ok++; record(S.cur, "ok", secs) }
+      S.cur = null;
     }
     next();
   }
 
   function next(){
     clearTimeout(S.timer);
-    if(!S.items.length){ stop(); return }
-    var token = ++S.token;               // ignora respostas de anúncios antigos
-    S.idx = (S.idx + 1) % S.items.length;
-    var item = S.items[S.idx];
+    if(S.sleeping) return;
+    if(!S.items.length || (S.cfg && scr().added === false && !PREVIEW)){ stop(); if(S.cfg) idle(); return }
+    // próximo anúncio que pode passar agora (vigência, dia da semana e horário)
+    var p = parts(), n = S.items.length, item = null;
+    for(var k = 1; k <= n; k++){ var j = (S.idx + k) % n; if(A.itemOn(S.items[j], p)){ S.idx = j; item = S.items[j]; break } }
+    if(!item){ stop(); idle(); S.timer = setTimeout(next, 15000); return }
+
+    var token = ++S.token;
     var L = $("L" + (1 - S.layer));
     var old = $("L" + S.layer);
-
     function alive(){ return token === S.token }
     function show(){
       if(!alive()) return;
       hideMsg();
       L.className = "layer on"; old.className = "layer";
       S.layer = 1 - S.layer; S.cur = item; S.started = Date.now(); S.skips = 0;
-      setTimeout(function(){ if(old.className === "layer") old.innerHTML = "" }, 900);
+      setTimeout(function(){ if(old.className === "layer") clearLayer(old) }, 900);
       preloadNext();
     }
     function skip(why){
       if(!alive()) return;
       fail(why, item);
-      L.innerHTML = "";
-      if(S.cur === item) S.cur = null;
+      record(item, "failed", 0, why);
+      clearLayer(L);
       if(++S.skips >= S.items.length){
         S.skips = 0;
         msg("Não consegui abrir os anúncios",
             S.online ? "Os arquivos não carregaram nesta TV. Vou tentar de novo em 20 segundos." : "Sem internet e nada salvo ainda nesta TV.", true);
-        S.cur = null;
         S.timer = setTimeout(next, 20000); return;
       }
       S.timer = setTimeout(next, 300);
     }
 
-    L.innerHTML = "";
-    if(item.kind === "video"){
+    clearLayer(L);
+    localBlob(item.url).then(function(blob){
+      if(!alive()) return;
+      var src = item.url;
+      if(blob){ src = URL.createObjectURL(blob); L._url = src }
+      if(item.kind === "video") playVideo(src); else playImage(src, blob);
+    });
+
+    function playVideo(src){
       var v = document.createElement("video");
       v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
-      v.preload = "auto"; v.muted = S.muted; v.src = item.url;
-      L.appendChild(v);   // carrega na camada escondida e só aparece quando começa a tocar
+      v.preload = "auto"; v.muted = S.muted || !!PREVIEW; v.src = src;
+      L.appendChild(v);
       var started = false, lastT = -1, stuck = 0;
       v.addEventListener("playing", function(){
         if(started || !alive()) return;
@@ -239,32 +682,32 @@
         clearTimeout(S.timer);
         var max = (isFinite(v.duration) && v.duration > 0 ? v.duration + 5 : 600) * 1000;
         S.timer = setTimeout(function(){ if(alive()) finish() }, Math.min(max, 600000));
-        // vigia: se o vídeo travar por 15 s, passa para o próximo
         var guard = setInterval(function(){
           if(!alive()){ clearInterval(guard); return }
-          if(v.currentTime === lastT){ if(++stuck >= 3){ clearInterval(guard); fail("vídeo travou", item); finish() } }
+          if(v.currentTime === lastT){ if(++stuck >= 3){ clearInterval(guard); fail("vídeo travou", item); finish("stalled") } }
           else { stuck = 0; lastT = v.currentTime }
         }, 5000);
       });
       v.addEventListener("ended", function(){ if(alive() && started) finish() });
-      v.addEventListener("error", function(){ if(!alive()) return; if(!started) skip("vídeo não abriu"); else finish() });
-      var p = v.play();
-      if(p && p["catch"]) p["catch"](function(){
+      v.addEventListener("error", function(){ if(!alive()) return; if(!started) skip("vídeo não abriu"); else finish("stalled") });
+      var pl = v.play();
+      if(pl && pl["catch"]) pl["catch"](function(){
         if(!alive()) return;
-        // navegador comum bloqueia vídeo com som: tenta sem som
         if(!v.muted){ v.muted = true; S.muted = true; var p2 = v.play(); if(p2 && p2["catch"]) p2["catch"](function(){ skip("vídeo não tocou") }) }
         else skip("vídeo não tocou");
       });
       S.timer = setTimeout(function(){ if(!started) skip("vídeo demorou demais para abrir") }, 25000);
-    } else {
-      var img = new Image();
+    }
+
+    function playImage(src, blob){
+      var img = new Image(), done = false;
       img.decoding = "async";
-      var done = false;
       function showImage(el, w, h, bdUrl){
         if(!w || !h){ skip("imagem vazia"); return }
         if(w * h > MAX_PIXELS){ skip("imagem grande demais (" + w + "x" + h + ")"); return }
-        // foto em pé ou de outro formato: fundo desfocado com a própria foto
-        var screenRatio = window.innerWidth / Math.max(1, window.innerHeight), ratio = w / h;
+        // foto de outro formato: fundo desfocado com a própria foto
+        var sw = G.RW || window.innerWidth, sh = Math.max(1, (G.RH || window.innerHeight) - G.bh);
+        var screenRatio = sw / sh, ratio = w / h;
         if(bdUrl && Math.abs(ratio - screenRatio) / screenRatio > 0.12){
           var bd = document.createElement("div"); bd.className = "bd";
           bd.style.backgroundImage = "url(\"" + bdUrl.replace(/"/g, "%22") + "\")";
@@ -274,71 +717,109 @@
         show();
         S.timer = setTimeout(function(){ if(alive()) finish() }, Math.max(3, item.duration || 10) * 1000);
       }
+      function viaBitmap(b){
+        if(!b){ skip("imagem não abriu"); return }
+        if(!window.createImageBitmap){ viaJs(b, "sem createImageBitmap"); return }
+        createImageBitmap(b).then(function(bmp){
+          if(!alive()) return;
+          var cv = document.createElement("canvas"); cv.width = bmp.width; cv.height = bmp.height;
+          cv.getContext("2d").drawImage(bmp, 0, 0); if(bmp.close) bmp.close();
+          S.fallback = "canvas";
+          showImage(cv, cv.width, cv.height, null);
+        })["catch"](function(e){ viaJs(b, e && (e.name || e.message)) });
+      }
+      // último recurso para TV Box que não abre JPEG: decodifica em JavaScript,
+      // mostra e guarda uma cópia em PNG no aparelho (nas próximas vezes abre direto)
+      function viaJs(b, why){
+        jsDecode(b).then(function(cv){
+          if(!alive()) return;
+          S.fallback = "js";
+          showImage(cv, cv.width, cv.height, null);
+          if(M.on && cv.toBlob) cv.toBlob(function(png){
+            if(!png) return;
+            caches.open(M.name).then(function(c){ return c.put(item.url, new Response(png, { headers:{ "Content-Type":"image/png" } })) })
+              .then(function(){ M.ready[item.url] = true })["catch"](function(){});
+          }, "image/png");
+        })["catch"](function(e){ skip("imagem não decodifica (" + why + "; " + (e && e.message) + ")") });
+      }
       img.onload = function(){
         if(done || !alive()) return; done = true;
-        showImage(img, img.naturalWidth, img.naturalHeight, item.url);
+        showImage(img, img.naturalWidth, img.naturalHeight, src);
       };
       img.onerror = function(){
         if(done || !alive()) return; done = true;
-        loadViaBlob(item, function(e, el, how){
-          if(!alive()) return;
-          if(e){ skip("imagem não abriu: " + e.message); return }
-          S.fallback = how;                      // registra que precisou do plano B
-          showImage(el, el.naturalWidth || el.width, el.naturalHeight || el.height, el.src || null);
-        });
+        if(blob){ viaBitmap(blob); return }
+        // Plano B (TV Box que não abre certos JPEG pelo endereço): baixa e decodifica
+        fetch(item.url, { cache:"no-store" }).then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.blob() })
+          .then(function(b){
+            if(!alive()) return;
+            var u = URL.createObjectURL(b), im = new Image();
+            im.onload = function(){ if(!alive()){ URL.revokeObjectURL(u); return } L._url = u; S.fallback = "blob"; showImage(im, im.naturalWidth, im.naturalHeight, u) };
+            im.onerror = function(){ URL.revokeObjectURL(u); viaBitmap(b) };
+            im.src = u;
+          })["catch"](function(e){ skip("imagem não abriu: download falhou (" + (e && e.message) + ")") });
       };
       S.timer = setTimeout(function(){ if(!done){ done = true; img.src = ""; skip("imagem demorou demais para abrir") } }, IMG_TIMEOUT);
-      img.src = item.url;
+      img.src = src;
     }
   }
 
-  // Plano B para imagens que o <img> não abre nesta TV Box:
-  // baixa o arquivo, tenta abrir de novo e, se precisar, decodifica num canvas.
-  var blobCache = {};   // url -> endereço local (evita baixar de novo e não acumula memória)
-  function loadViaBlob(item, cb){
-    var ct = "";
-    var cached = blobCache[item.url];
-    if(cached){
-      var ci = new Image();
-      ci.onload = function(){ cb(null, ci, "blob") };
-      ci.onerror = function(){ delete blobCache[item.url]; URL.revokeObjectURL(cached); loadViaBlob(item, cb) };
-      ci.src = cached; return;
-    }
-    fetch(item.url, { cache:"no-store" })
-      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); ct = r.headers.get("content-type") || ""; return r.blob() })
-      .then(function(b){
-        var u = URL.createObjectURL(b), im = new Image();
-        im.onload = function(){ blobCache[item.url] = u; cb(null, im, "blob") };
-        im.onerror = function(){
-          URL.revokeObjectURL(u);
-          if(!window.createImageBitmap){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes)")); return }
-          createImageBitmap(b).then(function(bmp){
-            var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
-            c.getContext("2d").drawImage(bmp, 0, 0); if(bmp.close) bmp.close();
-            c.naturalWidth = c.width; c.naturalHeight = c.height;
-            cb(null, c, "canvas");
-          })["catch"](function(e){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes): " + (e && (e.name || e.message)))) });
-        };
-        im.src = u;
-      })
-      ["catch"](function(e){ cb(new Error("download falhou: " + (e && e.message))) });
+  var jpegLib = null;
+  function jsDecode(blob){
+    jpegLib = jpegLib || new Promise(function(res, rej){
+      var sc = document.createElement("script"); sc.src = "jpeg-decoder.js"; sc.onload = res;
+      sc.onerror = function(){ jpegLib = null; rej(new Error("decodificador indisponível")) };
+      document.head.appendChild(sc);
+    });
+    return jpegLib.then(function(){ return new Response(blob).arrayBuffer() }).then(function(buf){
+      var b = new Uint8Array(buf);
+      if(b[0] !== 0xFF || b[1] !== 0xD8) throw new Error("não é JPEG");
+      var im = window["jpeg-js"].decode(b, { useTArray:true, formatAsRGBA:true, maxResolutionInMP:16, maxMemoryUsageInMB:200 });
+      var cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
+      var g = cv.getContext("2d"), d = g.createImageData(im.width, im.height);
+      d.data.set(im.data); g.putImageData(d, 0, 0);
+      return cv;
+    });
   }
 
   function preloadNext(){
-    if(S.items.length < 2) return;
+    if(S.items.length < 2 || M.on) return;       // com arquivos no aparelho não precisa
     var n = S.items[(S.idx + 1) % S.items.length];
-    if(n.kind === "image"){ var i = new Image(); i.src = n.url }
+    if(n.kind === "image"){ var im = new Image(); im.src = n.url }
+  }
+
+  // ---------- prévia ao vivo no painel ----------
+  if(PREVIEW){
+    window.addEventListener("message", function(e){
+      if(e.origin !== location.origin) return;
+      var m = e.data || {};
+      if(m.type === "sp-preview"){
+        S.override = m.screen || null;
+        S.ovNews = m.news || null;
+        if(S.cfg) onConfig();
+      }
+    });
+    try { if(window.parent !== window) window.parent.postMessage({ type:"sp-ready" }, location.origin) } catch(e){}
   }
 
   // ---------- início ----------
-  msg("Conectando…", "", false);
-  try { var last = JSON.parse(ls("sf_last") || "null"); if(last && last.items){ S.name = last.name } } catch(e){}
-  sync(true);
+  layout();
+  msg(PREVIEW ? "Carregando a prévia…" : "Conectando…", "", false);
+  if(!PREVIEW && "serviceWorker" in navigator && location.protocol === "https:"){
+    try { navigator.serviceWorker.register("sw.js")["catch"](function(){}) } catch(e){}
+  }
+  scanCache().then(function(){ sync(true) });
   setInterval(function(){ sync(false) }, SYNC_MS);
-  setInterval(checkVersion, 5 * 60000);
-  // recarrega a página uma vez por dia de madrugada (libera memória)
-  setInterval(function(){ var d = new Date(); if(d.getHours() === 4 && d.getMinutes() < 2 && Date.now() - S.boot > 3600000) location.reload() }, 60000);
-  window.ScreenFlowPlayer = { state:S, sync:sync, next:next, version:VERSION };
+  setInterval(function(){ checkHours(); tickClock() }, 15000);
+  setInterval(flush, 60000);
+  if(!PREVIEW){
+    setInterval(checkVersion, 5 * 60000);
+    // recarrega a página uma vez por dia de madrugada (libera memória)
+    setInterval(function(){ var p = parts(); if(p.min >= 240 && p.min < 242 && Date.now() - S.boot > 3600000 && !S.cur) location.reload() }, 60000);
+  }
+  window.addEventListener("online", function(){ sync(false) });
+  window.StartPlay = window.ScreenFlowPlayer = { state:S, news:T, media:M, geo:function(){ return G }, sync:sync, next:next,
+    version:VERSION, refreshBand:refreshBand, checkHours:checkHours, parts:parts, queue:qLoad, flush:flush };
 })();
 </script>
 </body>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0E1014">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22%3E%3Cstop offset=%220%22 stop-color=%22%23FC0491%22/%3E%3Cstop offset=%221%22 stop-color=%22%231D02A9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22url(%23g)%22/%3E%3Cpath d=%22M12 9v14l11-7z%22 fill=%22white%22/%3E%3C/svg%3E">
-<title>Start Play · Painel</title>
+<title>START PLAY · Painel</title>
 <style>
   :root{
     --bg:#F5F6F8; --card:#FFFFFF; --line:#E4E6EB; --text:#14161B; --muted:#646B78;
@@ -14,33 +14,36 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  button,input,select{font:inherit;color:inherit}
+  button,input,select,textarea{font:inherit;color:inherit}
   button{cursor:pointer;border:0;background:none}
   a{color:var(--acc)}
   .hide{display:none!important}
+  .num{font-variant-numeric:tabular-nums}
 
   /* topo */
   .top{position:sticky;top:0;z-index:5;background:#0E1014;color:#fff}
-  .top-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 16px;height:56px}
+  .top-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:0 16px;height:56px}
   .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
-  .brand svg{width:26px;height:26px}
-  .brand em{font-style:normal;color:#FF7AC6;font-weight:600}
   .brand .lg{height:24px;width:auto;display:block}
-  .brand .tag-p{font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.14);padding:2px 8px;border-radius:999px;letter-spacing:.02em}
-  .tabs{display:flex;gap:4px;margin-left:8px;overflow-x:auto}
-  .tab{padding:8px 12px;border-radius:8px;color:#C5CAD3;font-weight:500;white-space:nowrap}
+  .brand .tag-p{font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);padding:2px 8px;border-radius:999px;letter-spacing:.06em}
+  .tabs{display:flex;gap:2px;margin-left:6px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:8px 11px;border-radius:8px;color:#C5CAD3;font-weight:500;white-space:nowrap}
   .tab.on{background:#232838;color:#fff}
   .spacer{flex:1}
   .who{color:#9AA1AD;font-size:13px;white-space:nowrap}
   .link-btn{color:#C5CAD3;font-size:13px;padding:6px 8px;border-radius:6px}
   .link-btn:hover{background:#232838}
 
-  main{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+  main{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
   .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
   h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  h2.sec{font-size:15px;font-weight:700;margin:26px 0 10px}
   .sub{color:var(--muted);font-size:14px}
+  .small{font-size:12.5px}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--acc);background:var(--grad);color:#fff}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--acc);background:var(--grad);color:#fff;white-space:nowrap}
+  .btn svg{width:16px;height:16px;flex-shrink:0}
   .btn:hover{filter:brightness(1.06)}
   .btn:disabled{opacity:.55;cursor:default}
   .btn.ghost{background:var(--card);background-image:none;color:var(--text);border:1px solid var(--line)}
@@ -49,12 +52,13 @@
   .btn:focus-visible,.icon:focus-visible,.tab:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-  .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--gray-soft);color:var(--muted);white-space:nowrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--gray-soft);color:var(--muted);white-space:nowrap}
   .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
   .chip.err{background:var(--err-soft);color:var(--err)} .chip.acc{background:var(--acc-soft);color:var(--acc)}
   .dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+  .pad{padding:14px 16px}
   .list{display:flex;flex-direction:column;gap:10px}
   .row{display:flex;align-items:center;gap:14px;padding:12px}
   .thumb{width:112px;height:63px;border-radius:8px;background:#0E1014;flex-shrink:0;overflow:hidden;position:relative}
@@ -62,101 +66,154 @@
   .thumb .kind{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px}
   .info{flex:1;min-width:0}
   .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .t2{color:var(--muted);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .acts{display:flex;gap:2px;flex-shrink:0}
+  .t2{color:var(--muted);font-size:13px;margin-top:2px}
+  .t2.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acts{display:flex;gap:2px;flex-shrink:0;align-items:center}
   .icon{width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
   .icon:hover{background:var(--gray-soft);color:var(--text)}
   .icon:disabled{opacity:.3;cursor:default;background:none}
   .icon svg{width:18px;height:18px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+  .warn-txt{color:var(--warn)} .err-txt{color:var(--err)} .ok-txt{color:var(--ok)}
 
-  .empty{text-align:center;padding:48px 16px;color:var(--muted)}
+  .empty{text-align:center;padding:40px 16px;color:var(--muted)}
   .empty h3{color:var(--text);font-size:17px;margin-bottom:6px}
   .empty .btn{margin-top:16px}
 
-  .help{padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
-  .help b{display:block;margin-bottom:2px}
-  .help code{background:var(--acc-soft);color:var(--acc);padding:2px 6px;border-radius:6px;font-weight:600;font-size:14px;word-break:break-all}
+  /* indicadores */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{padding:14px 16px}
+  .kpi .k{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kpi .v{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+  .kpi .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .kpi.alert{border-color:#F0C9C9;background:#FFF8F8}
+  .grid2c{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:8px}
+  .bars .b{flex:1;background:var(--grad);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+  .bars .b span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}
+  .alerts .al{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .alerts .al:last-child{border-bottom:0}
+  .alerts .al b{display:block;font-size:14px}
+  .meter{height:8px;border-radius:99px;background:var(--gray-soft);overflow:hidden;margin-top:6px}
+  .meter i{display:block;height:100%;background:var(--ok);border-radius:99px}
+  .meter.warn i{background:#E5A33A} .meter.err i{background:var(--err)}
 
   /* formulário */
   .field{margin-bottom:14px}
-  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field label,.lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
   .field .hint{font-size:12px;color:var(--muted);margin-top:4px}
   .in{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:#fff}
+  textarea.in{height:auto;padding:10px 12px;resize:vertical}
   .in:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
   .drop{border:1.5px dashed #C9CDD5;border-radius:12px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:#FAFBFC}
   .drop.has{border-style:solid;border-color:var(--line);text-align:left}
   .drop strong{color:var(--text)}
   .preview{display:flex;gap:12px;align-items:center}
   .checks{display:flex;flex-wrap:wrap;gap:8px}
-  .check{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer;background:#fff}
+  .check{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer;background:#fff;user-select:none}
   .check input{accent-color:var(--acc)}
+  .check.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc);font-weight:600}
+  .check.off{opacity:.45;cursor:not-allowed}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .days button{width:44px;height:36px;border-radius:9px;border:1px solid var(--line);background:#fff;font-weight:600;font-size:13px}
+  .days button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+  .switch{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:14px;user-select:none}
+  .switch input{display:none}
+  .switch .sl{display:inline-block;width:40px;height:23px;border-radius:99px;background:#CDD1D8;position:relative;flex-shrink:0;transition:background .15s}
+  .field label.switch{display:flex;margin-bottom:0}
+  .switch .sl:after{content:"";position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff;transition:left .15s}
+  .switch input:checked+.sl{background:var(--acc)}
+  .switch input:checked+.sl:after{left:20px}
+  .box{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:#fff}
+  .box h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
   .err-box{background:var(--err-soft);color:var(--err);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+  .ok-box{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .info-box{background:var(--acc-soft);color:var(--acc);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .warn-box{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .seg{display:inline-flex;background:var(--gray-soft);border-radius:10px;padding:3px;gap:2px}
+  .seg button{padding:6px 12px;border-radius:8px;font-weight:600;font-size:13.5px;color:var(--muted)}
+  .seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  input[type=range]{accent-color:var(--acc);width:100%}
 
   /* janela */
-  .modal-bg{position:fixed;inset:0;background:rgba(14,16,20,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto}
+  .modal-bg{position:fixed;inset:0;background:rgba(14,16,20,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:32px 12px;overflow-y:auto}
   .modal{background:#fff;border-radius:16px;width:100%;max-width:560px;padding:20px 20px 16px;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+  .modal.wide{max-width:1080px}
+  .modal.mid{max-width:760px}
   .modal h2{font-size:18px;margin-bottom:16px}
-  .modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  .cols{display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start}
+  .sticky{position:sticky;top:0}
+
+  /* prévia da TV */
+  .tvwrap{background:#0E1014;border-radius:12px;padding:10px;display:flex;justify-content:center}
+  .tvbox{position:relative;overflow:hidden;border-radius:6px;background:#000}
+  .tvbox iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;pointer-events:none}
+  .tvprev{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;margin-top:10px}
+  .tvprev.v{aspect-ratio:9/16;max-width:240px;margin-left:auto;margin-right:auto}
+  .tvprev .bd{position:absolute;inset:-6%;background-size:cover;background-position:center;filter:blur(18px) brightness(.55)}
+  .tvprev img,.tvprev video{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain}
+  .tvprev .lbl{position:absolute;left:8px;top:8px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:999px;letter-spacing:.03em;z-index:3}
+  .tvprev .mock{position:absolute;left:0;right:0;bottom:0;height:7.2%;min-height:14px;background:#07070C;display:flex;align-items:center;font-size:10px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;z-index:2}
+  .tvprev .mock b{background:var(--grad);height:100%;display:flex;align-items:center;padding:0 8px;font-size:9px;letter-spacing:.06em}
+  .tvprev .mock span{padding:0 8px;color:#fff}
+  .tvprev .mock em{font-style:normal;color:#FFD23F;font-weight:800}
+
+  /* tabelas */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  td.num,th.num{text-align:right;white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  tr.tot td{font-weight:700;background:#FAFBFC}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .filters .in{width:auto;min-width:150px;height:38px}
+  .timeline .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .timeline .ev:last-child{border-bottom:0}
+  .timeline .when{color:var(--muted);white-space:nowrap;min-width:118px}
+  .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;background:var(--warn-soft);border-color:#F1D9B5}
+  .banner b{color:var(--warn)}
+  .unit-h{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+  .code-big{font-size:20px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+  .pill{display:inline-block;background:var(--acc-soft);color:var(--acc);padding:2px 8px;border-radius:6px;font-weight:600;font-size:13px;word-break:break-all}
 
   /* login */
   .auth{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;background:linear-gradient(90deg,#FC0491,#1D02A9)}
   .auth-logo{width:260px;max-width:70vw;height:auto;display:block}
   .auth .modal{max-width:400px;padding:28px}
-  .auth .brand{color:var(--text);font-size:18px;margin-bottom:14px}
+  .auth .ttl{font-weight:800;letter-spacing:.06em;font-size:15px;margin-bottom:14px}
   .auth p{color:var(--muted);font-size:14px;margin-bottom:16px}
   .auth .btn{width:100%;margin-top:4px}
   .auth .alt{text-align:center;margin-top:14px;font-size:14px}
 
-  /* relatório */
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
-  td.num,th.num{text-align:right;white-space:nowrap}
-  tr:last-child td{border-bottom:0}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-  .filters .in{width:auto;min-width:160px}
-  .print-head{display:none}
-  .tvline{font-size:12.5px;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .tvline .chip{font-size:12px;padding:2px 8px}
-  .warn-txt{color:var(--warn)}
-  .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;background:var(--warn-soft);border-color:#F1D9B5}
-  .banner b{color:var(--warn)}
-  .tvprev{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;margin-top:10px}
-  .tvprev .bd{position:absolute;inset:-6%;background-size:cover;background-position:center;filter:blur(18px) brightness(.55)}
-  .tvprev img,.tvprev video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .tvprev .lbl{position:absolute;left:8px;top:8px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:999px;letter-spacing:.03em}
-  .ok-box{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
-  .info-box{background:var(--acc-soft);color:var(--acc);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
-
-  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14161B;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:90vw}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14161B;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:90vw;display:flex;gap:12px;align-items:center}
+  .toast button{color:#FF7AC6;font-weight:700}
   .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
   .spin.dark{border-color:#D5D8DE;border-top-color:var(--acc)}
   @keyframes sp{to{transform:rotate(360deg)}}
 
+  @media (max-width:900px){
+    .cols,.grid2c{grid-template-columns:1fr}
+    .sticky{position:static}
+  }
   @media (max-width:640px){
     .top-in{gap:8px;padding:0 10px}
-    .brand span.full{display:none}
-    .who{display:none}
+    .brand .tag-p,.who{display:none}
     .row{flex-wrap:wrap}
     .thumb{width:96px;height:54px}
     .acts{width:100%;justify-content:flex-end;border-top:1px solid var(--line);padding-top:6px}
-    .grid2{grid-template-columns:1fr}
+    .grid2,.grid3{grid-template-columns:1fr}
     .hide-sm{display:none}
-  }
-  @media print{
-    .top,.filters,.no-print,.toast{display:none!important}
-    body{background:#fff}
-    main{padding:0}
-    .card{border:0}
-    .print-head{display:block;margin-bottom:16px}
+    .kpi .v{font-size:20px}
   }
 </style>
 </head>
 <body>
 
 <svg width="0" height="0" style="position:absolute"><defs>
-  <symbol id="logo" viewBox="0 0 48 48"><rect x="3" y="7" width="42" height="28" rx="6" fill="#7F77DD"/><path d="M20 15v12l10-6z" fill="#0E1014"/><rect x="16" y="38" width="16" height="3" rx="1.5" fill="#7F77DD"/></symbol>
   <symbol id="up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
@@ -165,13 +222,19 @@
   <symbol id="eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g></symbol>
   <symbol id="reload" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></g></symbol>
   <symbol id="trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></symbol>
+  <symbol id="wa" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm4.6 12.6c-.2.6-1.1 1.1-1.6 1.1-.4.1-.9.1-1.5-.1a13 13 0 0 1-1.3-.5 10.4 10.4 0 0 1-4-3.6c-.3-.4-1-1.3-1-2.5s.6-1.8.9-2c.2-.3.5-.3.6-.3h.5c.1 0 .4 0 .5.4l.7 1.7c.1.1.1.3 0 .4l-.2.4-.4.4c-.1.1-.2.3-.1.5.1.2.6 1 1.3 1.6.9.8 1.7 1.1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.5-.1l1.6.8c.2.1.4.1.4.2.1.1.1.6-.1 1.2z" fill="currentColor"/></symbol>
+  <symbol id="money" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></g></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></g></symbol>
+  <symbol id="undo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10H9"/><path d="M8 5L4 9l4 4"/></g></symbol>
 </defs></svg>
 
 <!-- LOGIN -->
 <div class="auth hide" id="v-auth">
-  <img class="auth-logo" src="logo.png" alt="Start Play">
+  <img class="auth-logo" src="logo.png" alt="START PLAY">
   <div class="modal">
-    <div class="brand">Painel</div>
+    <div class="ttl">START PLAY · PAINEL</div>
     <div id="auth-box"></div>
   </div>
 </div>
@@ -179,11 +242,15 @@
 <!-- APP -->
 <div id="v-app" class="hide">
   <header class="top"><div class="top-in">
-    <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="tag-p full">Painel</span></div>
+    <div class="brand"><img class="lg" src="logo.png" alt="START PLAY"><span class="tag-p">PAINEL</span></div>
     <nav class="tabs">
-      <button class="tab" data-tab="anuncios">Anúncios</button>
+      <button class="tab" data-tab="inicio">Início</button>
       <button class="tab" data-tab="telas">Telas</button>
+      <button class="tab" data-tab="anuncios">Anúncios</button>
+      <button class="tab" data-tab="clientes">Clientes</button>
       <button class="tab" data-tab="relatorio">Relatório</button>
+      <button class="tab" data-tab="financeiro">Financeiro</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
     </nav>
     <div class="spacer"></div>
     <span class="who" id="who"></span>
@@ -194,679 +261,10 @@
 
 <div id="modal-root"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
-<script>
-"use strict";
-const CFG = window.SCREENFLOW || {};
-const BUCKET = "midia";
-const MAX_MB = 50;
-let sb = null, me = null, state = { media: [], screens: [], tab: "anuncios" };
-
-const $ = (s, r = document) => r.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-const icon = n => `<svg><use href="#${n}"/></svg>`;
-const two = n => String(n).padStart(2, "0");
-const isoDay = d => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
-const today = () => isoDay(new Date());
-const fmtDay = s => { if (!s) return ""; const [y, m, d] = s.split("-"); return `${d}/${m}/${y.slice(2)}` };
-const fmtSecs = s => s < 60 ? `${s}s` : (s < 3600 ? `${Math.floor(s / 60)}min ${s % 60 ? (s % 60) + "s" : ""}` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}min`).trim();
-const fmtMB = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",") + " MB";
-
-function toast(msg, ms = 2800) {
-  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
-  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
-}
-function friendly(e) {
-  const m = (e && (e.message || e.error_description || e.msg)) || String(e);
-  if (/Invalid login/i.test(m)) return "E-mail ou senha incorretos.";
-  if (/Email not confirmed/i.test(m)) return "Confirme o seu e-mail primeiro (veja a caixa de entrada).";
-  if (/already registered/i.test(m)) return "Esse e-mail já tem conta. Use Entrar.";
-  if (/Password should be/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
-  if (/exceeded the maximum allowed size|Payload too large|413/i.test(m)) return `Arquivo grande demais (máximo ${MAX_MB} MB).`;
-  if (/mime type|invalid_mime/i.test(m)) return "Formato não aceito. Use JPG, PNG, WEBP, GIF, MP4 ou WEBM.";
-  if (/row-level security|permission denied/i.test(m)) return "Sem permissão. Entre com a conta de administrador.";
-  if (/Failed to fetch|NetworkError/i.test(m)) return "Sem conexão. Confira a internet e tente de novo.";
-  return m;
-}
-
-// ---------------------------------------------------------------------------
-// Início e login
-// ---------------------------------------------------------------------------
-async function start() {
-  if (!window.supabase || !CFG.supabaseUrl || CFG.supabaseUrl.startsWith("COLE_")) {
-    $("#v-auth").classList.remove("hide");
-    $("#auth-box").innerHTML = `<p>Falta configurar o arquivo <b>config.js</b> com os dados do Supabase.</p>`;
-    return;
-  }
-  sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
-  sb.auth.onAuthStateChange((ev, session) => {
-    if (ev === "PASSWORD_RECOVERY") { showAuth("newpass"); return; }
-    if (ev === "SIGNED_OUT") { me = null; showAuth("login"); }
-  });
-  const { data } = await sb.auth.getSession();
-  if (data.session) await enter(data.session.user);
-  else {
-    const { data: has } = await sb.rpc("sf_has_admin");
-    showAuth(has ? "login" : "signup");
-  }
-}
-
-function showAuth(mode, note) {
-  $("#v-app").classList.add("hide");
-  $("#v-auth").classList.remove("hide");
-  const box = $("#auth-box");
-  const forms = {
-    login: `<p>Entre para gerenciar os anúncios das suas telas.</p>
-      ${note ? `<div class="err-box" style="background:var(--ok-soft);color:var(--ok)">${esc(note)}</div>` : ""}
-      <form id="f-auth"><div class="field"><label for="em">E-mail</label><input class="in" id="em" type="email" autocomplete="email" required></div>
-      <div class="field"><label for="pw">Senha</label><input class="in" id="pw" type="password" autocomplete="current-password" required></div>
-      <div id="auth-err"></div><button class="btn" type="submit">Entrar</button></form>
-      <div class="alt"><a href="#" id="forgot">Esqueci a senha</a></div>`,
-    signup: `<p><b>Primeiro acesso.</b> Crie a conta de administrador. Só esta conta vai poder mexer no painel.</p>
-      <form id="f-auth"><div class="field"><label for="em">E-mail</label><input class="in" id="em" type="email" autocomplete="email" required></div>
-      <div class="field"><label for="pw">Senha (mínimo 6 caracteres)</label><input class="in" id="pw" type="password" autocomplete="new-password" minlength="6" required></div>
-      <div id="auth-err"></div><button class="btn" type="submit">Criar conta</button></form>
-      <div class="alt"><a href="#" id="to-login">Já tenho conta</a></div>`,
-    confirm: `<p>Pronto! Enviamos um link de confirmação para o seu e-mail. Clique nele e depois entre aqui.</p>
-      <button class="btn" id="to-login2">Ir para o login</button>`,
-    newpass: `<p>Digite a nova senha.</p>
-      <form id="f-auth"><div class="field"><label for="pw">Nova senha</label><input class="in" id="pw" type="password" minlength="6" required autocomplete="new-password"></div>
-      <div id="auth-err"></div><button class="btn" type="submit">Salvar senha</button></form>`
-  };
-  box.innerHTML = forms[mode];
-  const err = m => { $("#auth-err").innerHTML = m ? `<div class="err-box">${esc(m)}</div>` : "" };
-  $("#to-login")?.addEventListener("click", e => { e.preventDefault(); showAuth("login") });
-  $("#to-login2")?.addEventListener("click", () => showAuth("login"));
-  $("#forgot")?.addEventListener("click", async e => {
-    e.preventDefault();
-    const em = $("#em").value.trim();
-    if (!em) { err("Digite o seu e-mail acima e clique de novo em 'Esqueci a senha'."); return; }
-    const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
-    if (error) err(friendly(error)); else showAuth("login", "Enviamos um link para redefinir a senha no seu e-mail.");
-  });
-  $("#f-auth")?.addEventListener("submit", async e => {
-    e.preventDefault();
-    const btn = $("#f-auth .btn"); btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`; err("");
-    try {
-      if (mode === "login") {
-        const { data, error } = await sb.auth.signInWithPassword({ email: $("#em").value.trim(), password: $("#pw").value });
-        if (error) throw error; await enter(data.user);
-      } else if (mode === "signup") {
-        const { data, error } = await sb.auth.signUp({ email: $("#em").value.trim(), password: $("#pw").value,
-          options: { emailRedirectTo: location.origin + location.pathname } });
-        if (error) throw error;
-        if (data.session) await enter(data.user); else showAuth("confirm");
-      } else if (mode === "newpass") {
-        const { data, error } = await sb.auth.updateUser({ password: $("#pw").value });
-        if (error) throw error; await enter(data.user);
-      }
-    } catch (ex) { err(friendly(ex)); btn.disabled = false; btn.textContent = { login: "Entrar", signup: "Criar conta", newpass: "Salvar senha" }[mode]; }
-  });
-}
-
-async function enter(user) {
-  me = user;
-  const { data: isAdmin } = await sb.rpc("sf_is_admin");
-  if (!isAdmin) {
-    await sb.auth.signOut();
-    showAuth("login", "Esta conta não é a administradora deste painel.");
-    return;
-  }
-  $("#v-auth").classList.add("hide");
-  $("#v-app").classList.remove("hide");
-  $("#who").textContent = user.email || "";
-  route();
-}
-
-$("#logout").addEventListener("click", async () => { await sb.auth.signOut(); });
-document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => { location.hash = b.dataset.tab }));
-window.addEventListener("hashchange", () => { if (me) route() });
-
-function route() {
-  const t = (location.hash || "#anuncios").slice(1);
-  state.tab = ["anuncios", "telas", "relatorio"].includes(t) ? t : "anuncios";
-  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
-  clearInterval(state.poll);
-  ({ anuncios: pageMedia, telas: pageScreens, relatorio: pageReport })[state.tab]();
-}
-
-// ---------------------------------------------------------------------------
-// Dados
-// ---------------------------------------------------------------------------
-async function loadMedia() {
-  const { data, error } = await sb.from("media").select("*").order("position").order("created_at");
-  if (error) throw error; state.media = data || [];
-}
-async function loadScreens() {
-  const { data, error } = await sb.from("screens").select("*").order("created_at");
-  if (error) throw error; state.screens = data || [];
-}
-function statusOf(m) {
-  const t = today();
-  if (!m.active) return ["Pausado", ""];
-  if (m.starts_on && m.starts_on > t) return ["Agendado", "acc"];
-  if (m.ends_on && m.ends_on < t) return ["Vencido", "err"];
-  return ["No ar", "ok"];
-}
-const isOnline = s => s.last_seen && (Date.now() - new Date(s.last_seen).getTime()) < 3 * 60 * 1000;
-function ago(ts) {
-  if (!ts) return "nunca";
-  const s = Math.round((Date.now() - new Date(ts).getTime()) / 1000);
-  if (s < 90) return "agora";
-  if (s < 3600) return `há ${Math.round(s / 60)} min`;
-  if (s < 86400) return `há ${Math.round(s / 3600)} h`;
-  return `há ${Math.round(s / 86400)} dias`;
-}
-const screenName = id => (state.screens.find(s => s.id === id) || {}).name || "tela removida";
-
-// ---------------------------------------------------------------------------
-// Anúncios
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// Imagens leves para TV Box (fotos de celular têm 12 MP e travam aparelhos simples)
-// ---------------------------------------------------------------------------
-const MAX_SIDE = 1920, HEAVY = 1.2 * 1048576;
-const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2));
-async function decodeImage(blob) {
-  if (window.createImageBitmap) { try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); } catch (e) {} }
-  return await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Não consegui ler essa imagem.")); i.src = URL.createObjectURL(blob); });
-}
-async function prepImage(file) {
-  if (file.type === "image/gif") return { file, changed: false };           // GIF pode ser animado: mantém
-  const img = await decodeImage(file);
-  const w0 = img.width || img.naturalWidth, h0 = img.height || img.naturalHeight;
-  const scale = Math.min(1, MAX_SIDE / Math.max(w0, h0));
-  if (scale === 1 && file.size <= HEAVY) return { file, w: w0, h: h0, w0, h0, changed: false };
-  const w = Math.round(w0 * scale), h = Math.round(h0 * scale);
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
-  const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, w, h);
-  g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, w, h);
-  if (img.close) img.close();
-  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
-  if (!blob || blob.size >= file.size && scale === 1) return { file, w: w0, h: h0, w0, h0, changed: false };
-  const name = (file.name || "imagem").replace(/\.[^.]+$/, "") + ".jpg";
-  return { file: new File([blob], name, { type: "image/jpeg" }), w, h, w0, h0, changed: true, before: file.size };
-}
-const isHeavy = m => m.kind === "image" && (!m.size_bytes || m.size_bytes > HEAVY) && !/\.gif$/i.test(m.path);
-async function optimizeExisting(m) {
-  const r = await fetch(m.url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`Não consegui baixar a imagem de "${m.title}".`);
-  const blob = await r.blob();
-  const p = await prepImage(new File([blob], m.path, { type: blob.type || "image/jpeg" }));
-  if (!p.changed) { await sb.from("media").update({ size_bytes: blob.size }).eq("id", m.id); return false; }
-  const newPath = `${uuid()}.jpg`;
-  const up = await sb.storage.from(BUCKET).upload(newPath, p.file, { cacheControl: "31536000", contentType: "image/jpeg", upsert: false });
-  if (up.error) throw up.error;
-  const url = sb.storage.from(BUCKET).getPublicUrl(newPath).data.publicUrl;
-  const { error } = await sb.from("media").update({ path: newPath, url, size_bytes: p.file.size }).eq("id", m.id);
-  if (error) { await sb.storage.from(BUCKET).remove([newPath]); throw error; }
-  await sb.storage.from(BUCKET).remove([m.path]);
-  return true;
-}
-const looksAuto = n => /^(img|dsc|pxl|mvimg|whatsapp|chatgpt|screenshot|captura|imagem|image|photo|foto|video|vid|wp|signal)[\s_-]/i.test(n) || /^\d[\d\s_.-]+$/.test(n);
-
-// exibições de hoje por anúncio (vem do registro que a TV manda)
-async function loadStats() {
-  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
-  const { data } = await sb.rpc("sf_report", { p_from: d0.toISOString(), p_to: d1.toISOString() });
-  const st = {};
-  (data || []).forEach(r => { const x = st[r.media_id] = st[r.media_id] || { plays: 0, last: null };
-    x.plays += Number(r.plays); if (!x.last || r.last_at > x.last) x.last = r.last_at; });
-  state.stats = st;
-}
-function tvLine(m) {
-  const [st] = statusOf(m);
-  if (st !== "No ar") return "";
-  const x = (state.stats || {})[m.id];
-  const targets = (m.screen_ids && m.screen_ids.length ? state.screens.filter(s => m.screen_ids.includes(s.id)) : state.screens.filter(isAdded));
-  const online = targets.filter(isOnline);
-  if (x && x.plays) return `<div class="tvline"><span class="chip ok">Na TV</span><span class="sub">passou ${x.plays.toLocaleString("pt-BR")}x hoje · última ${ago(x.last)}</span></div>`;
-  if (!online.length) return `<div class="tvline"><span class="chip">Nenhuma tela ligada</span><span class="sub">${targets.length ? "as telas deste anúncio estão desligadas" : "adicione uma tela na aba Telas"}</span></div>`;
-  const fresh = Date.now() - new Date(m.created_at).getTime() < 3 * 60 * 1000;
-  return fresh ? `<div class="tvline"><span class="chip acc">Indo para a TV</span><span class="sub">aparece em até 1 minuto</span></div>`
-    : `<div class="tvline"><span class="chip warn">Ainda não passou hoje</span><span class="sub">veja a aba Telas para saber o que a TV está fazendo</span></div>`;
-}
-
-async function pageMedia() {
-  const main = $("#main");
-  main.innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
-  try { await Promise.all([loadMedia(), loadScreens(), loadStats()]); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
-  const heavy = state.media.filter(isHeavy);
-  const counts = { "No ar": 0, "Agendado": 0, "Vencido": 0, "Pausado": 0 };
-  state.media.forEach(m => counts[statusOf(m)[0]]++);
-  main.innerHTML = `
-    <div class="head"><div><h1>Anúncios</h1><div class="sub">Passam em sequência, nesta ordem, nas TVs.</div></div>
-      <div class="spacer"></div><button class="btn" id="new">+ Novo anúncio</button></div>
-    ${state.media.length ? `<div class="chips">
-      <span class="chip ok"><span class="dot"></span>${counts["No ar"]} no ar</span>
-      ${counts["Agendado"] ? `<span class="chip acc">${counts["Agendado"]} agendado(s)</span>` : ""}
-      ${counts["Vencido"] ? `<span class="chip err">${counts["Vencido"]} vencido(s)</span>` : ""}
-      ${counts["Pausado"] ? `<span class="chip">${counts["Pausado"]} pausado(s)</span>` : ""}</div>` : ""}
-    ${heavy.length ? `<div class="card banner" id="heavy"><div><b>${heavy.length} foto(s) pesada(s) para TV Box.</b> <span class="sub">Fotos de celular muito grandes podem não aparecer ou travar a TV.</span></div>
-      <button class="btn sm" id="opt">Otimizar agora</button></div>` : ""}
-    <div class="list" id="mlist"></div>`;
-  $("#new").addEventListener("click", () => mediaForm());
-  $("#opt")?.addEventListener("click", async () => {
-    const b = $("#opt"); b.disabled = true; let n = 0;
-    try {
-      for (const m of heavy) { b.innerHTML = `<span class="spin"></span> ${++n} de ${heavy.length}…`; await optimizeExisting(m); }
-      toast("Fotos otimizadas! A TV pega a versão nova em até 1 minuto.", 4000);
-    } catch (ex) { toast(friendly(ex), 5000); }
-    if (state.tab === "anuncios") pageMedia();
-  });
-  clearInterval(state.poll);
-  state.poll = setInterval(async () => {
-    if (state.tab !== "anuncios" || $("#modal-root").innerHTML) return;
-    try { await Promise.all([loadStats(), loadScreens()]); state.media.forEach(m => { const el = document.querySelector(`[data-id="${m.id}"] .tvslot`); if (el) el.innerHTML = tvLine(m); }); } catch (e) {}
-  }, 60000);
-  const list = $("#mlist");
-  if (!state.media.length) {
-    list.innerHTML = `<div class="card empty"><h3>Nenhum anúncio ainda</h3><div>Envie uma foto ou vídeo e ele aparece nas TVs em até 1 minuto.</div>
-      <button class="btn" id="new2">+ Enviar o primeiro anúncio</button></div>`;
-    $("#new2").addEventListener("click", () => mediaForm());
-    return;
-  }
-  list.innerHTML = state.media.map((m, i) => {
-    const [st, cls] = statusOf(m);
-    const period = m.starts_on || m.ends_on ? `${m.starts_on ? fmtDay(m.starts_on) : "hoje"} → ${m.ends_on ? fmtDay(m.ends_on) : "sem fim"}` : "sem data de fim";
-    const where = m.screen_ids && m.screen_ids.length ? m.screen_ids.map(screenName).join(", ") : "todas as telas";
-    return `<div class="card row" data-id="${m.id}">
-      <div class="thumb">${m.kind === "video" ? `<video src="${esc(m.url)}#t=1" preload="metadata" muted playsinline></video>` : `<img src="${esc(m.url)}" alt="" loading="lazy">`}
-        <span class="kind">${m.kind === "video" ? "VÍDEO" : "FOTO"} · ${m.duration_sec}s</span></div>
-      <div class="info"><div class="t1">${esc(m.title)}</div>
-        <div class="t2">${m.advertiser ? esc(m.advertiser) + " · " : ""}${period} · ${esc(where)}</div>
-        <div style="margin-top:6px"><span class="chip ${cls}">${st}</span>${isHeavy(m) ? ` <span class="chip warn">foto pesada</span>` : ""}</div>
-        <div class="tvslot">${tvLine(m)}</div></div>
-      <div class="acts">
-        <button class="icon" data-a="up" aria-label="Subir" title="Subir" ${i === 0 ? "disabled" : ""}>${icon("up")}</button>
-        <button class="icon" data-a="down" aria-label="Descer" title="Descer" ${i === state.media.length - 1 ? "disabled" : ""}>${icon("down")}</button>
-        <button class="icon" data-a="toggle" aria-label="${m.active ? "Pausar" : "Retomar"}" title="${m.active ? "Pausar" : "Retomar"}">${icon(m.active ? "pause" : "play")}</button>
-        <button class="icon" data-a="edit" aria-label="Editar" title="Editar">${icon("edit")}</button>
-        <button class="icon" data-a="del" aria-label="Apagar" title="Apagar">${icon("trash")}</button>
-      </div></div>`;
-  }).join("");
-  list.addEventListener("click", async e => {
-    const b = e.target.closest("[data-a]"); if (!b) return;
-    const id = b.closest("[data-id]").dataset.id;
-    const i = state.media.findIndex(m => m.id === id), m = state.media[i];
-    try {
-      if (b.dataset.a === "edit") return mediaForm(m);
-      if (b.dataset.a === "del") return confirmBox(`Apagar "${m.title}"?`, "O anúncio sai das TVs e o arquivo é apagado. O histórico de exibições dele também é apagado.", "Apagar", async () => {
-        const { error } = await sb.from("media").delete().eq("id", m.id); if (error) throw error;
-        await sb.storage.from(BUCKET).remove([m.path]);
-        toast("Anúncio apagado"); pageMedia();
-      });
-      if (b.dataset.a === "toggle") {
-        const { error } = await sb.from("media").update({ active: !m.active }).eq("id", m.id); if (error) throw error;
-        toast(m.active ? "Anúncio pausado" : "Anúncio de volta ao ar"); return pageMedia();
-      }
-      const j = b.dataset.a === "up" ? i - 1 : i + 1, o = state.media[j];
-      if (!o) return;
-      // reorganiza tudo em passos de 10 para não haver empate
-      const order = state.media.map(x => x.id); order[i] = o.id; order[j] = m.id;
-      await Promise.all(order.map((oid, k) => sb.from("media").update({ position: (k + 1) * 10 }).eq("id", oid)));
-      pageMedia();
-    } catch (ex) { toast(friendly(ex), 4000); }
-  });
-}
-
-function tvPreview(url, isVid) {
-  return `<div class="tvprev">${isVid ? "" : `<div class="bd" style="background-image:url('${esc(url)}')"></div>`}
-    ${isVid ? `<video src="${esc(url)}#t=1" muted preload="metadata" playsinline></video>` : `<img src="${esc(url)}" alt="">`}<span class="lbl">COMO FICA NA TV</span></div>`;
-}
-
-function videoDuration(file) {
-  return new Promise(res => {
-    const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
-    v.onloadedmetadata = () => { const d = v.duration; URL.revokeObjectURL(v.src); res(isFinite(d) ? d : null) };
-    v.onerror = () => res(null);
-    v.src = URL.createObjectURL(file);
-  });
-}
-
-function mediaForm(m) {
-  const edit = !!m;
-  const sel = new Set(m?.screen_ids || []);
-  const scr = state.screens.filter(x => isAdded(x) || sel.has(x.id));
-  modal(`<h2>${edit ? "Editar anúncio" : "Novo anúncio"}</h2>
-    <form id="f-media">
-      <div class="field"><label>Arquivo</label>
-        <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" class="hide">
-        <div class="drop ${edit ? "has" : ""}" id="drop" tabindex="0" role="button">${edit
-          ? `<div class="preview"><div class="thumb">${m.kind === "video" ? `<video src="${esc(m.url)}#t=1" muted preload="metadata"></video>` : `<img src="${esc(m.url)}" alt="">`}</div><div><strong>Arquivo atual</strong><div class="t2">Clique para trocar</div></div></div>`
-          : `<strong>Escolher foto ou vídeo</strong><div>JPG, PNG, WEBP, MP4 · até ${MAX_MB} MB · ideal deitada (1920×1080)</div>`}</div>
-        ${edit ? tvPreview(m.url, m.kind === "video") : ""}</div>
-      <div id="prep"></div>
-      <div class="field"><label for="title">Título</label><input class="in" id="title" maxlength="120" required value="${esc(m?.title || "")}" placeholder="Ex.: Promoção de verão"></div>
-      <div class="field"><label for="adv">Anunciante <span class="sub">(opcional)</span></label><input class="in" id="adv" maxlength="120" value="${esc(m?.advertiser || "")}" placeholder="Ex.: Padaria Central" list="advs">
-        <datalist id="advs">${[...new Set(state.media.map(x => x.advertiser).filter(Boolean))].map(a => `<option value="${esc(a)}">`).join("")}</datalist></div>
-      <div class="field" id="dur-field"><label for="dur">Tempo na tela (segundos)</label><input class="in" id="dur" type="number" min="3" max="600" value="${m?.duration_sec || 10}">
-        <div class="hint" id="dur-hint">${m?.kind === "video" ? "Para vídeo, usamos a duração do próprio vídeo." : "Quanto tempo a foto fica na tela."}</div></div>
-      <div class="grid2">
-        <div class="field"><label for="d1">Começa em <span class="sub">(opcional)</span></label><input class="in" id="d1" type="date" value="${m?.starts_on || ""}"></div>
-        <div class="field"><label for="d2">Termina em <span class="sub">(opcional)</span></label><input class="in" id="d2" type="date" value="${m?.ends_on || ""}"></div>
-      </div>
-      <div class="field"><label>Em quais telas</label>
-        ${scr.length ? `<div class="checks">${scr.map(s => `<label class="check"><input type="checkbox" value="${esc(s.id)}" ${sel.has(s.id) ? "checked" : ""}>${esc(s.name)}</label>`).join("")}</div>
-        <div class="hint">Nenhuma marcada = passa em todas as telas.</div>` : `<div class="hint">Vai passar em todas as telas.</div>`}</div>
-      <div id="f-err"></div>
-      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit" id="save">${edit ? "Salvar" : "Enviar"}</button></div>
-    </form>`);
-  let file = null, vidDur = null;
-  const err = t => { $("#f-err").innerHTML = t ? `<div class="err-box">${esc(t)}</div>` : "" };
-  const pick = () => $("#file").click();
-  $("#drop").addEventListener("click", pick);
-  $("#drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick() } });
-  $("#drop").addEventListener("dragover", e => e.preventDefault());
-  $("#drop").addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files[0]) choose(e.dataTransfer.files[0]) });
-  $("#file").addEventListener("change", e => { if (e.target.files[0]) choose(e.target.files[0]) });
-  async function choose(f) {
-    err("");
-    if (!/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(f.type)) { err("Formato não aceito. Use JPG, PNG, WEBP, GIF, MP4 ou WEBM."); return; }
-    if (f.size > MAX_MB * 1048576) { err(`Esse arquivo tem ${fmtMB(f.size)}. O máximo é ${MAX_MB} MB.`); return; }
-    file = null; vidDur = null;
-    const isVid = f.type.startsWith("video/");
-    $("#prep").innerHTML = "";
-    $("#save").disabled = true;
-    let note = "";
-    if (!isVid) {
-      $("#drop").innerHTML = `<div class="preview"><span class="spin dark"></span><div><strong>${esc(f.name)}</strong><div class="t2">Preparando para a TV…</div></div></div>`;
-      try {
-        const p = await prepImage(f);
-        f = p.file;
-        if (p.changed) note = `<div class="ok-box">Otimizada para TV Box: ${p.w0}×${p.h0} → ${p.w}×${p.h} · ${fmtMB(p.before)} → ${fmtMB(f.size)}</div>`;
-        if (p.h > p.w) note += `<div class="info-box">Foto em pé: na TV ela aparece no centro, com a própria foto desfocada no fundo. Para ocupar a tela toda, use uma imagem deitada (1920×1080).</div>`;
-      } catch (ex) { $("#save").disabled = false; err(friendly(ex)); return; }
-    }
-    file = f;
-    const url = URL.createObjectURL(f);
-    $("#drop").classList.add("has");
-    $("#drop").innerHTML = `<div class="preview"><div class="thumb">${isVid ? `<video src="${url}" muted></video>` : `<img src="${url}" alt="">`}</div>
-      <div><strong>${esc(f.name)}</strong><div class="t2">${isVid ? "Vídeo" : "Foto"} · ${fmtMB(f.size)} · clique para trocar</div></div></div>`;
-    $("#prep").innerHTML = note + tvPreview(url, isVid);
-    $("#save").disabled = false;
-    const base = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
-    if (!$("#title").value && !looksAuto(base)) $("#title").value = base.slice(0, 120);
-    if (!$("#title").value) $("#title").focus();
-    if (isVid) {
-      vidDur = await videoDuration(f);
-      if (vidDur && vidDur > 600) { err("Vídeo com mais de 10 minutos. Envie um vídeo mais curto."); file = null; return; }
-      if (vidDur) { $("#dur").value = Math.max(3, Math.ceil(vidDur)); }
-      $("#dur").disabled = true; $("#dur-hint").textContent = "Para vídeo, usamos a duração do próprio vídeo.";
-    } else { $("#dur").disabled = false; $("#dur-hint").textContent = "Quanto tempo a foto fica na tela."; }
-  }
-  if (m?.kind === "video") $("#dur").disabled = true;
-
-  $("#f-media").addEventListener("submit", async e => {
-    e.preventDefault(); err("");
-    if (!edit && !file) { err("Escolha uma foto ou vídeo."); return; }
-    const d1 = $("#d1").value || null, d2 = $("#d2").value || null;
-    if (d1 && d2 && d2 < d1) { err("A data de término é antes do início."); return; }
-    const dur = Math.min(600, Math.max(3, parseInt($("#dur").value, 10) || 10));
-    const screens = [...document.querySelectorAll(".checks input:checked")].map(i => i.value);
-    const row = { title: $("#title").value.trim(), advertiser: $("#adv").value.trim() || null, duration_sec: dur,
-      starts_on: d1, ends_on: d2, screen_ids: screens.length ? screens : null };
-    if (!row.title) { err("Dê um título ao anúncio."); return; }
-    const btn = $("#save"); btn.disabled = true;
-    btn.innerHTML = `<span class="spin"></span> ${file ? "Enviando " + fmtMB(file.size) + "…" : "Salvando…"}`;
-    let newPath = null;
-    try {
-      if (file) {
-        const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || file.type.split("/")[1]).toLowerCase();
-        newPath = `${uuid()}.${ext}`;
-        const up = await sb.storage.from(BUCKET).upload(newPath, file, { cacheControl: "31536000", contentType: file.type, upsert: false });
-        if (up.error) throw up.error;
-        row.path = newPath;
-        row.url = sb.storage.from(BUCKET).getPublicUrl(newPath).data.publicUrl;
-        row.kind = file.type.startsWith("video/") ? "video" : "image";
-        row.size_bytes = file.size;
-        if (row.kind === "video" && vidDur) row.duration_sec = Math.min(600, Math.max(3, Math.ceil(vidDur)));
-      }
-      if (edit) {
-        const { error } = await sb.from("media").update(row).eq("id", m.id); if (error) throw error;
-        if (file && m.path) await sb.storage.from(BUCKET).remove([m.path]);
-      } else {
-        row.position = (state.media.reduce((a, x) => Math.max(a, x.position), 0) || 0) + 10;
-        const { error } = await sb.from("media").insert(row); if (error) throw error;
-      }
-      closeModal(); toast(edit ? "Anúncio atualizado" : "Anúncio no ar! Aparece nas TVs em até 1 minuto."); pageMedia();
-    } catch (ex) {
-      if (newPath) await sb.storage.from(BUCKET).remove([newPath]);
-      err(friendly(ex)); btn.disabled = false; btn.textContent = edit ? "Salvar" : "Enviar";
-    }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Telas
-// ---------------------------------------------------------------------------
-const NEW_NAME = "Nova tela";
-const codeOf = s => s.id.slice(-6).toUpperCase();
-const isAdded = s => s.name && s.name !== NEW_NAME;
-function siteHost() {
-  const site = location.origin + location.pathname.replace(/painel(\.html)?\/?$/, "");
-  return site.replace(/^https?:\/\//, "").replace(/\/$/, "");
-}
-
-function screenRow(s) {
-  const live = isOnline(s), inf = s.info || {}, added = isAdded(s);
-  const dev = [inf.model, inf.android ? "Android " + inf.android : "", inf.ip ? String(inf.ip).split(" ")[0] : ""].filter(Boolean).join(" · ");
-  const st = s.status || {}, fresh = s.status_at && (Date.now() - new Date(s.status_at).getTime()) < 5 * 60 * 1000;
-  let play = "";
-  if (live && added) {
-    if (!st.v) play = `<div class="t2 warn-txt">Player antigo nesta TV: clique em Recarregar (ou no controle: menu → Recarregar).</div>`;
-    else if (fresh) play = `<div class="t2">${st.now ? "Tocando agora: <b>" + esc(st.now) + "</b>" : (st.n ? "Carregando anúncios…" : "Sem anúncios para esta tela")} · ${st.ok || 0} exibido(s) desde que ligou</div>`;
-    if (st.v && st.lastErr && st.lastErrAt && Date.now() - new Date(st.lastErrAt).getTime() < 2 * 3600 * 1000)
-      play += `<div class="t2 warn-txt">Último problema ${ago(st.lastErrAt)}: ${esc(st.lastErr)}</div>`;
-  }
-  return `<div class="card row" data-id="${esc(s.id)}">
-    <div class="info"><div class="t1">${added ? esc(s.name) : `Código <span style="letter-spacing:.06em">${esc(codeOf(s))}</span>`}${added && s.location ? ` <span class="sub">· ${esc(s.location)}</span>` : ""}</div>
-      <div class="t2">${added ? "Código " + esc(codeOf(s)) : "Detectada, ainda sem nome"}${dev ? " · " + esc(dev) : ""}</div>
-      ${play}
-      <div style="margin-top:6px"><span class="chip ${live ? "ok" : "err"}"><span class="dot"></span>${live ? "Ligada" : "Desligada"} · visto ${ago(s.last_seen)}</span></div></div>
-    <div class="acts">${added && live ? `<button class="icon" data-a="identify" aria-label="Identificar na TV" title="Mostrar o nome na TV">${icon("eye")}</button>
-      <button class="icon" data-a="reload" aria-label="Recarregar a TV" title="Recarregar a TV">${icon("reload")}</button>` : ""}${added
-      ? `<button class="icon" data-a="edit" aria-label="Renomear" title="Renomear">${icon("edit")}</button>`
-      : `<button class="btn sm" data-a="add">Adicionar</button>`}
-      <button class="icon" data-a="del" aria-label="Remover" title="Remover">${icon("trash")}</button></div></div>`;
-}
-
-async function pageScreens() {
-  const main = $("#main");
-  if (!main.querySelector("#slist")) main.innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
-  try { await loadScreens(); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
-  const host = siteHost();
-  const recent = s => s.last_seen && Date.now() - new Date(s.last_seen).getTime() < 24 * 3600 * 1000;
-  const mine = state.screens.filter(isAdded), waiting = state.screens.filter(s => !isAdded(s) && recent(s));
-  const on = mine.filter(isOnline).length;
-  main.innerHTML = `
-    <div class="head"><div><h1>Telas</h1><div class="sub">${mine.length} tela(s) · ${on} ligada(s) agora</div></div>
-      <div class="spacer"></div><button class="btn" id="add-screen">+ Adicionar tela</button></div>
-    <div id="slist">
-      ${mine.length ? `<div class="list">${mine.map(screenRow).join("")}</div>`
-        : `<div class="card empty"><h3>Nenhuma tela adicionada ainda</h3><div>Ligue o TV Box, abra o player e adicione a tela com o código que aparece nela.</div>
-            <button class="btn" id="add-screen2">+ Adicionar a primeira tela</button></div>`}
-      ${waiting.length ? `<h2 style="font-size:15px;margin:28px 0 4px">Aguardando cadastro</h2>
-        <div class="sub" style="margin-bottom:10px">Aparelhos que abriram o player mas ainda não foram adicionados. Se não for uma TV sua, apague.</div>
-        <div class="list">${waiting.map(screenRow).join("")}</div>` : ""}
-    </div>
-    <div class="sub" style="margin-top:24px">Instalar ou atualizar o app na TV: no navegador do TV Box, abra <code style="background:var(--acc-soft);color:var(--acc);padding:2px 6px;border-radius:6px">${esc(host)}/startplay.apk</code></div>`;
-  $("#add-screen").addEventListener("click", () => addScreenForm());
-  $("#add-screen2")?.addEventListener("click", () => addScreenForm());
-  $("#slist").addEventListener("click", e => {
-    const b = e.target.closest("[data-a]"); if (!b) return;
-    const s = state.screens.find(x => x.id === b.closest("[data-id]").dataset.id);
-    if (b.dataset.a === "edit") screenForm(s);
-    else if (b.dataset.a === "add") addScreenForm(codeOf(s));
-    else if (b.dataset.a === "identify" || b.dataset.a === "reload") {
-      sb.from("screens").update({ command: b.dataset.a }).eq("id", s.id).then(({ error }) => {
-        if (error) toast(friendly(error), 4000);
-        else toast(b.dataset.a === "reload" ? `"${s.name}" vai recarregar em até 1 minuto.` : `O nome aparece na TV "${s.name}" em até 1 minuto.`, 4000);
-      });
-    }
-    else confirmBox(`Remover "${isAdded(s) ? s.name : "tela " + codeOf(s)}"?`, "Se esse aparelho ainda estiver com o player aberto, ele volta a aparecer em 'Aguardando cadastro'. O histórico de exibições dele é apagado.", "Remover", async () => {
-      const { error } = await sb.from("screens").delete().eq("id", s.id); if (error) throw error;
-      toast("Tela removida"); pageScreens();
-    });
-  });
-  state.poll = setInterval(() => { if (state.tab === "telas" && !$("#modal-root").innerHTML) pageScreens() }, 30000);
-}
-
-function addScreenForm(prefill) {
-  const host = siteHost();
-  modal(`<h2>Adicionar tela</h2>
-    <ol class="sub" style="margin:0 0 16px 18px;line-height:1.6">
-      <li>No TV Box, abra o app <b>Start Play</b> → menu → <b>Endereço do player</b> e digite <code style="background:var(--acc-soft);color:var(--acc);padding:1px 6px;border-radius:6px">${esc(host)}</code></li>
-      <li>A TV mostra <b>"Tela pronta"</b> com um <b>código de 6 letras</b>.</li>
-      <li>Digite o código aqui e dê um nome para a tela.</li>
-    </ol>
-    <form id="f-add">
-      <div class="field"><label for="code">Código da TV</label>
-        <input class="in" id="code" maxlength="8" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="KCYVSB"
-          style="font-size:20px;font-weight:700;letter-spacing:.18em;text-transform:uppercase" value="${esc(prefill || "")}"></div>
-      <div class="field"><label for="sn">Nome da tela</label><input class="in" id="sn" maxlength="80" required placeholder="Ex.: Recepção"></div>
-      <div class="field"><label for="sl">Local <span class="sub">(opcional)</span></label><input class="in" id="sl" maxlength="120" placeholder="Ex.: Loja Centro"></div>
-      <div id="f-err"></div>
-      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit" id="add-ok">Adicionar</button></div>
-    </form>`);
-  if (prefill) $("#sn").focus();
-  const err = (t, ok) => { $("#f-err").innerHTML = t ? `<div class="err-box"${ok ? ' style="background:var(--acc-soft);color:var(--acc)"' : ""}>${t}</div>` : "" };
-  $("#f-add").addEventListener("submit", async e => {
-    e.preventDefault(); err("");
-    const code = $("#code").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const name = $("#sn").value.trim(), loc = $("#sl").value.trim() || null;
-    if (code.length !== 6) { err("O código tem 6 letras/números. Ele aparece na TV, na tela \"Tela pronta\"."); return; }
-    if (!name || name.toLowerCase() === NEW_NAME.toLowerCase()) { err("Dê um nome para a tela, por exemplo \"Recepção\"."); return; }
-    const btn = $("#add-ok"); btn.disabled = true;
-    // a TV fala com o servidor a cada minuto: procura por até ~1 minuto
-    for (let i = 0; i < 13; i++) {
-      btn.innerHTML = `<span class="spin"></span> ${i ? "Esperando a TV…" : "Procurando…"}`;
-      try {
-        await loadScreens();
-        const found = state.screens.filter(s => codeOf(s) === code);
-        if (found.length) {
-          const s = found.sort((a, b) => new Date(b.last_seen || 0) - new Date(a.last_seen || 0))[0];
-          const { error } = await sb.from("screens").update({ name, location: loc }).eq("id", s.id);
-          if (error) throw error;
-          closeModal(); toast(`Tela "${name}" adicionada! O nome aparece na TV em até 1 minuto.`, 4000); pageScreens();
-          return;
-        }
-      } catch (ex) { err(esc(friendly(ex))); btn.disabled = false; btn.textContent = "Adicionar"; return; }
-      if (!$("#f-add")) return; // janela fechada
-      if (i === 0) err(`Ainda não achei a tela <b>${esc(code)}</b>. Deixe a TV ligada mostrando "Tela pronta". Vou continuar procurando por 1 minuto…`, true);
-      await new Promise(r => setTimeout(r, 5000));
-      if (!$("#f-add")) return;
-    }
-    err(`Não achei a tela <b>${esc(code)}</b>. Confira o código na TV e se ela está com o endereço <b>${esc(host)}</b> e com internet.`);
-    btn.disabled = false; btn.textContent = "Tentar de novo";
-  });
-}
-
-function screenForm(s) {
-  modal(`<h2>Tela ${esc(s.id.slice(-6).toUpperCase())}</h2><form id="f-scr">
-    <div class="field"><label for="sn">Nome</label><input class="in" id="sn" maxlength="80" required value="${esc(s.name)}" placeholder="Ex.: Recepção"></div>
-    <div class="field"><label for="sl">Local <span class="sub">(opcional)</span></label><input class="in" id="sl" maxlength="120" value="${esc(s.location || "")}" placeholder="Ex.: Loja Centro"></div>
-    <div id="f-err"></div>
-    <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>`);
-  $("#f-scr").addEventListener("submit", async e => {
-    e.preventDefault();
-    const { error } = await sb.from("screens").update({ name: $("#sn").value.trim() || "Nova tela", location: $("#sl").value.trim() || null }).eq("id", s.id);
-    if (error) { $("#f-err").innerHTML = `<div class="err-box">${esc(friendly(error))}</div>`; return; }
-    closeModal(); toast("Tela atualizada"); pageScreens();
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Relatório (comprovante de exibição)
-// ---------------------------------------------------------------------------
-function range(key) {
-  const now = new Date(), d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const add = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-  switch (key) {
-    case "hoje": return [d0, add(d0, 1)];
-    case "7": return [add(d0, -6), add(d0, 1)];
-    case "30": return [add(d0, -29), add(d0, 1)];
-    case "mes": return [new Date(now.getFullYear(), now.getMonth(), 1), add(d0, 1)];
-    case "mespassado": return [new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 1)];
-  }
-}
-async function pageReport() {
-  const main = $("#main");
-  try { if (!state.media.length) await loadMedia(); } catch (e) {}
-  const advs = [...new Set(state.media.map(m => m.advertiser).filter(Boolean))].sort();
-  main.innerHTML = `
-    <div class="head"><div><h1>Relatório de exibição</h1><div class="sub">Quantas vezes cada anúncio passou, em quais telas. Serve de comprovante para o cliente.</div></div></div>
-    <div class="filters">
-      <select class="in" id="per"><option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option><option value="30">Últimos 30 dias</option><option value="mes">Este mês</option><option value="mespassado">Mês passado</option></select>
-      <select class="in" id="adv"><option value="">Todos os anunciantes</option>${advs.map(a => `<option>${esc(a)}</option>`).join("")}</select>
-      <div class="spacer"></div>
-      <button class="btn ghost sm" id="csv">Copiar planilha</button>
-      <button class="btn sm" id="print">Imprimir / PDF</button>
-    </div>
-    <div class="print-head"><h1 id="ph-title">Comprovante de exibição</h1><div class="sub" id="ph-sub"></div></div>
-    <div class="card" id="rep"><div class="empty"><span class="spin dark"></span></div></div>`;
-  let rows = [];
-  async function load() {
-    const [a, b] = range($("#per").value);
-    $("#rep").innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
-    const { data, error } = await sb.rpc("sf_report", { p_from: a.toISOString(), p_to: b.toISOString() });
-    if (error) { $("#rep").innerHTML = `<div class="err-box">${esc(friendly(error))}</div>`; return; }
-    const adv = $("#adv").value;
-    rows = (data || []).filter(r => !adv || r.advertiser === adv);
-    const per = $("#per").selectedOptions[0].textContent, last = new Date(b - 1);
-    $("#ph-title").textContent = adv ? `Comprovante de exibição — ${adv}` : "Comprovante de exibição";
-    $("#ph-sub").textContent = `${per}: ${a.toLocaleDateString("pt-BR")} a ${last.toLocaleDateString("pt-BR")} · emitido em ${new Date().toLocaleString("pt-BR")}`;
-    if (!rows.length) { $("#rep").innerHTML = `<div class="empty"><h3>Nenhuma exibição nesse período</h3><div>As exibições são registradas enquanto as TVs estão ligadas e com internet.</div></div>`; return; }
-    const by = {};
-    rows.forEach(r => {
-      const k = r.media_id; by[k] = by[k] || { title: r.title, advertiser: r.advertiser, plays: 0, seconds: 0, screens: [] };
-      by[k].plays += Number(r.plays); by[k].seconds += Number(r.seconds);
-      by[k].screens.push(`${r.screen_name} (${r.plays}x)`);
-    });
-    const tot = Object.values(by).reduce((a, x) => (a.p += x.plays, a.s += x.seconds, a), { p: 0, s: 0 });
-    $("#rep").innerHTML = `<table><thead><tr><th>Anúncio</th><th class="hide-sm">Telas</th><th class="num">Exibições</th><th class="num">Tempo</th></tr></thead><tbody>
-      ${Object.values(by).map(x => `<tr><td><b>${esc(x.title)}</b>${x.advertiser ? `<div class="sub">${esc(x.advertiser)}</div>` : ""}</td>
-        <td class="hide-sm sub">${esc(x.screens.join(", "))}</td><td class="num">${x.plays.toLocaleString("pt-BR")}</td><td class="num">${fmtSecs(x.seconds)}</td></tr>`).join("")}
-      <tr><td><b>Total</b></td><td class="hide-sm"></td><td class="num"><b>${tot.p.toLocaleString("pt-BR")}</b></td><td class="num"><b>${fmtSecs(tot.s)}</b></td></tr>
-      </tbody></table>`;
-  }
-  $("#per").addEventListener("change", load);
-  $("#adv").addEventListener("change", load);
-  $("#print").addEventListener("click", () => window.print());
-  $("#csv").addEventListener("click", async () => {
-    if (!rows.length) { toast("Nada para copiar nesse período"); return; }
-    const lines = [["Anúncio", "Anunciante", "Tela", "Exibições", "Segundos", "Primeira", "Última"].join("\t")]
-      .concat(rows.map(r => [r.title, r.advertiser || "", r.screen_name, r.plays, r.seconds,
-        new Date(r.first_at).toLocaleString("pt-BR"), new Date(r.last_at).toLocaleString("pt-BR")].join("\t")));
-    try { await navigator.clipboard.writeText(lines.join("\n")); toast("Copiado! Cole no Excel ou Google Planilhas."); }
-    catch (e) { toast("Não consegui copiar neste navegador"); }
-  });
-  load();
-}
-
-// ---------------------------------------------------------------------------
-// Janelas
-// ---------------------------------------------------------------------------
-function modal(html) {
-  const root = $("#modal-root");
-  root.innerHTML = `<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
-  root.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeModal));
-  root.querySelector(".modal-bg").addEventListener("mousedown", e => { if (e.target.classList.contains("modal-bg")) closeModal() });
-  const f = root.querySelector("input:not([type=hidden]):not(.hide), button"); f && f.focus();
-}
-function closeModal() { $("#modal-root").innerHTML = "" }
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#modal-root").innerHTML) closeModal() });
-function confirmBox(title, text, label, fn) {
-  modal(`<h2>${esc(title)}</h2><p class="sub" style="margin-bottom:12px">${esc(text)}</p><div id="f-err"></div>
-    <div class="modal-foot"><button class="btn ghost" data-close>Cancelar</button><button class="btn danger" id="ok">${esc(label)}</button></div>`);
-  $("#ok").addEventListener("click", async () => {
-    $("#ok").disabled = true;
-    try { await fn(); closeModal(); } catch (ex) { $("#f-err").innerHTML = `<div class="err-box">${esc(friendly(ex))}</div>`; $("#ok").disabled = false; }
-  });
-}
-
-start();
-</script>
+<script src="agenda.js"></script>
+<script src="painel.js"></script>
+<script src="painel-gestao.js"></script>
 </body>
 </html>

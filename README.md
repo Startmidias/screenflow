@@ -1,16 +1,25 @@
-# Start Play — mídia indoor
+# START PLAY — mídia indoor
 
 - **Player (o que a TV abre):** https://startmidias.github.io/screenflow/
 - **Painel:** https://startmidias.github.io/screenflow/painel.html
 - **App da TV (Android):** https://startmidias.github.io/screenflow/startplay.apk
 
+O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link. Trocar o caminho exige um repositório novo (`startplay`) e um redirecionamento neste; até lá, tudo o que aparece na tela e no painel já é START PLAY.
+
 | Pasta / arquivo | O que é |
 |---|---|
-| `index.html` | Player da TV: toca os anúncios em loop e registra cada exibição |
-| `painel.html` | Painel de gestão (anúncios, telas, relatório de exibição) |
+| `index.html` | Player da TV 3.0: anúncios em loop, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição |
+| `agenda.js` | Regras de horário compartilhadas pelo player e pelo painel (expediente, virada da meia-noite, feriados, dias e horários dos anúncios, estimativa de inserções) |
+| `sw.js` | Guarda o player no aparelho para abrir mesmo sem internet |
+| `jpeg-decoder.js` | Plano B para fotos que o TV Box não consegue abrir sozinho (jpeg-js, licença BSD-3) |
+| `painel.html`, `painel.js`, `painel-gestao.js` | Painel: início, telas, anúncios por TV, clientes, financeiro, comprovante de exibição, ajustes |
+| `vendor/` | Bibliotecas usadas pelo painel (Supabase, jsPDF) |
 | `config.js` | Endereço do Supabase e chave pública (anon). A segurança fica nas regras do banco |
-| `supabase/instalar.sql` | Script do banco (rodar no SQL Editor do Supabase) |
-| `startplay.apk` | App Start Play para TV Box (tela inicial em modo quiosque) |
+| `supabase/instalar.sql` | Instalação do banco (rodar no SQL Editor do Supabase) |
+| `supabase/atualizacao-02.sql` … `04.sql` | Atualizações, em ordem. Cada uma pode ser rodada de novo sem estragar nada |
+| `supabase/functions/noticias/` | Função que busca os feeds de notícias, limpa e entrega as manchetes às TVs |
+| `startplay.apk` | App START PLAY para TV Box (tela inicial em modo quiosque) |
 | `app-tv/` | Código do app da TV (smali + interface em HTML) e o script de build |
+| `version.txt` | Versão do player; quando muda, as TVs recarregam sozinhas |
 
 A chave de assinatura do app **não** fica aqui: está no Mac em `Documentos/ScreenFlowTV/assinatura`.
