@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>ScreenFlow · Player</title>
+<title>Start Play · Player</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html{font-size:calc(100vh / 36)}
@@ -13,16 +13,16 @@
     -webkit-transition:opacity .6s ease;transition:opacity .6s ease;background:#000}
   .layer.on{opacity:1}
   .layer img,.layer video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
-  #msg{position:absolute;left:0;top:0;width:100%;height:100%;background:#0E1014;display:none}
+  #msg{position:absolute;left:0;top:0;width:100%;height:100%;background:#FC0491;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9);display:none}
   #msg.on{display:block}
   .box{position:absolute;left:6rem;right:6rem;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%)}
   .logo{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-weight:700;font-size:1.3rem;margin-bottom:2.4rem}
   .logo svg{width:2.4rem;height:2.4rem;margin-right:.7rem}
-  .logo em{font-style:normal;color:#A39DF0;margin-left:.35rem}
+  .logo img{height:3.2rem;width:auto;display:block}
   h1{font-size:2.6rem;font-weight:700;line-height:1.15}
-  p{color:#A3AAB6;font-size:1.2rem;line-height:1.45;margin-top:.8rem;max-width:44rem}
-  .code{display:inline-block;margin-top:2rem;padding:.7rem 1.2rem;border-radius:.7rem;background:#161A21;border:1px solid #2A303B;font-size:1.05rem;color:#F0F1F4}
-  .code b{color:#A39DF0;letter-spacing:.08em}
+  p{color:rgba(255,255,255,.85);font-size:1.2rem;line-height:1.45;margin-top:.8rem;max-width:44rem}
+  .code{display:inline-block;margin-top:2rem;padding:.7rem 1.2rem;border-radius:.7rem;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.18);font-size:1.05rem;color:#fff}
+  .code b{color:#fff;letter-spacing:.08em}
   #net{position:absolute;right:1.2rem;bottom:1rem;font-size:.75rem;color:#fff;background:rgba(0,0,0,.55);padding:.3rem .7rem;border-radius:1rem;display:none}
   #net.on{display:block}
 </style>
@@ -32,7 +32,7 @@
 <div class="layer" id="L1"></div>
 <div id="msg">
   <div class="box">
-    <div class="logo"><svg viewBox="0 0 48 48"><rect x="3" y="7" width="42" height="28" rx="6" fill="#7F77DD"/><path d="M20 15v12l10-6z" fill="#0E1014"/><rect x="16" y="38" width="16" height="3" rx="1.5" fill="#7F77DD"/></svg>ScreenFlow<em>TV</em></div>
+    <div class="logo"><img src="logo.png" alt="Start Play"></div>
     <h1 id="msg-t">Conectando…</h1>
     <p id="msg-p"></p>
     <div class="code" id="msg-c" style="display:none"></div>

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Start Play</title>
+<style>
+  :root{
+    --bg:#0E1014; --panel:#161A21; --panel2:#1D222B; --line:#2A303B;
+    --text:#F0F1F4; --muted:#A3AAB6; --acc:#FF2DA6; --acc2:#FF7AC6; --grad:linear-gradient(135deg,#FC0491 0%,#1D02A9 100%);
+    --ok:#3FB950; --warn:#E5A33B; --err:#F05252;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:calc(100vh / 36)}
+  html,body{height:100%;overflow:hidden;background:transparent;color:var(--text);
+    font-family:Roboto,"Noto Sans","Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  svg{display:block}
+
+  .screen{position:fixed;left:0;top:0;right:0;bottom:0;display:none}
+  .screen.on{display:block}
+  .opaque{background:var(--bg)}
+  .pad{position:absolute;left:3.6rem;right:3.6rem;top:2.4rem;bottom:2.2rem}
+
+  /* topo */
+  .top{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;
+    -webkit-justify-content:space-between;justify-content:space-between;height:2.6rem}
+  .brand{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-weight:700;font-size:1.15rem;letter-spacing:.01em}
+  .brand .mk{width:1.9rem;height:1.9rem;margin-right:.6rem}
+  .brand .lg{height:1.75rem;width:auto;display:block}
+  .brand .sep{width:1px;height:1.4rem;background:var(--line);margin:0 .9rem}
+  .brand em{font-style:normal;color:var(--acc2);margin-left:.35rem;font-weight:600}
+  .stat{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;color:var(--muted);font-size:.85rem}
+  .stat > span{margin-left:1.2rem;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  .clock{color:var(--text);font-weight:600;font-size:1rem}
+  .dot{width:.55rem;height:.55rem;border-radius:50%;display:inline-block;margin-right:.45rem;background:var(--muted)}
+  .dot.ok{background:var(--ok)} .dot.err{background:var(--err)} .dot.warn{background:var(--warn)}
+
+  /* boot */
+  #s-boot{background:#FC0491;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9)}
+  .boot-img{width:26rem;max-width:70%;height:auto;display:block;margin:0 auto}
+  .center{position:absolute;left:0;right:0;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%);text-align:center}
+  .boot-logo{width:6rem;height:6rem;margin:0 auto 1.2rem}
+  .boot-name{font-size:2rem;font-weight:700}
+  .boot-name em{font-style:normal;color:var(--acc2)}
+  .boot-sub{color:var(--muted);font-size:.95rem;margin-top:.6rem}
+  .dots{margin-top:1.6rem}
+  .dots i{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;background:#fff;margin:0 .25rem;
+    -webkit-animation:blink 1.2s infinite;animation:blink 1.2s infinite;opacity:.25}
+  .dots i:nth-child(2){-webkit-animation-delay:.2s;animation-delay:.2s}
+  .dots i:nth-child(3){-webkit-animation-delay:.4s;animation-delay:.4s}
+  @-webkit-keyframes blink{50%{opacity:1}} @keyframes blink{50%{opacity:1}}
+
+  /* textos */
+  h1{font-size:2.1rem;font-weight:700;line-height:1.15;letter-spacing:-.01em}
+  h2{font-size:1.5rem;font-weight:700}
+  .lead{color:var(--muted);font-size:1.05rem;line-height:1.45;margin-top:.7rem;max-width:34rem}
+  .small{color:var(--muted);font-size:.85rem;line-height:1.4}
+
+  /* passos (tela inicial) */
+  .steps{display:-webkit-flex;display:flex;margin-top:1.6rem}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:.7rem;padding:.9rem 1.1rem;margin-right:1rem;min-width:15rem}
+  .step b{display:block;font-size:.8rem;color:var(--muted);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+  .step span{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-top:.4rem;font-size:1rem;font-weight:600}
+
+  /* blocos clicáveis */
+  .tiles{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-right:-1rem}
+  .tile{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;text-align:left;
+    background:var(--panel);border:2px solid var(--line);border-radius:.8rem;padding:.8rem 1rem;
+    margin:0 1rem 1rem 0;height:4.3rem;outline:none;
+    -webkit-transition:-webkit-transform .12s ease-out,border-color .12s,background .12s;
+    transition:transform .12s ease-out,border-color .12s,background .12s}
+  .tile .ic{width:2.3rem;height:2.3rem;border-radius:.6rem;background:var(--panel2);margin-right:.85rem;
+    display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex-shrink:0;flex-shrink:0}
+  .tile .ic svg{width:1.3rem;height:1.3rem}
+  .tile .tx{min-width:0}
+  .tile .t1{font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .t2{font-size:.78rem;color:var(--muted);margin-top:.18rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile:focus{border-color:var(--acc);background:#2A1238;-webkit-transform:scale(1.04);transform:scale(1.04)}
+  .tile:focus .ic{background:#FC0491;background:-webkit-linear-gradient(315deg,#FC0491,#1D02A9);background:var(--grad)}
+  .tile.primary .ic{background:#FC0491;background:-webkit-linear-gradient(315deg,#FC0491,#1D02A9);background:var(--grad)}
+  .w4 .tile{width:calc(25% - 1rem);height:5.7rem;-webkit-flex-direction:column;flex-direction:column;
+    -webkit-align-items:flex-start;align-items:flex-start;-webkit-justify-content:center;justify-content:center}
+  .w4 .tile .ic{width:2rem;height:2rem;margin:0 0 .5rem 0}
+  .w4 .tile .ic svg{width:1.15rem;height:1.15rem}
+  .w4 .tile .tx{width:100%}
+  .w3 .tile{width:calc(33.333% - 1rem)}
+  .w5 .tile{width:calc(20% - 1rem)}
+
+  /* menu sobreposto */
+  #s-menu{background:-webkit-linear-gradient(bottom,rgba(9,10,13,.97) 0%,rgba(9,10,13,.93) 52%,rgba(9,10,13,0) 100%);
+           background:linear-gradient(to top,rgba(9,10,13,.97) 0%,rgba(9,10,13,.93) 52%,rgba(9,10,13,0) 100%)}
+  .sheet{position:absolute;left:3.6rem;right:3.6rem;bottom:2rem}
+  .sheet .top{margin-bottom:1rem}
+  .menu-hint{color:var(--muted);font-size:.78rem;margin-top:.2rem}
+
+  /* formulário */
+  .field{margin-top:1.6rem}
+  .field label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+  .input{width:100%;height:3.3rem;border-radius:.7rem;border:2px solid var(--line);background:var(--panel);
+    color:var(--text);font:inherit;font-size:1.15rem;padding:0 1.1rem;outline:none}
+  .input:focus{border-color:var(--acc);background:#22122E}
+  .err-msg{color:var(--err);font-size:.9rem;margin-top:.6rem;min-height:1.2rem}
+
+  /* apps */
+  .scroll{position:absolute;left:-.8rem;right:-.8rem;top:4.2rem;bottom:0;overflow:hidden}
+  .scroll-in{position:absolute;left:.8rem;right:.8rem;top:.6rem;-webkit-transition:-webkit-transform .15s;transition:transform .15s}
+  .av{font-weight:700;font-size:1.1rem;color:#fff}
+  .tag{display:inline-block;font-size:.7rem;font-weight:600;color:var(--acc2);letter-spacing:.03em}
+
+  /* info */
+  .rows{margin-top:1.4rem;background:var(--panel);border:1px solid var(--line);border-radius:.8rem;overflow:hidden}
+  .r{display:-webkit-flex;display:flex;padding:.62rem 1.2rem;border-bottom:1px solid var(--line);font-size:.95rem}
+  .r:last-child{border-bottom:0}
+  .r b{width:11rem;color:var(--muted);font-weight:500;-webkit-flex-shrink:0;flex-shrink:0}
+  .r span{word-break:break-all}
+
+  /* offline */
+  .big-ic{width:5rem;height:5rem;border-radius:1.2rem;background:var(--panel);border:1px solid var(--line);
+    display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;margin-bottom:1.2rem}
+  .big-ic svg{width:2.6rem;height:2.6rem}
+  .count{color:var(--warn);font-weight:600}
+
+  .foot{position:absolute;left:0;right:0;bottom:0;color:var(--muted);font-size:.8rem}
+  kbd{font-family:inherit;font-size:.75rem;border:1px solid var(--line);background:var(--panel);border-radius:.3rem;padding:.05rem .4rem;color:var(--text)}
+</style>
+</head>
+<body>
+
+<!-- ícones -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 48 48"><rect x="3" y="7" width="42" height="28" rx="6" fill="#7F77DD"/><path d="M20 15v12l10-6z" fill="#0E1014"/><rect x="16" y="38" width="16" height="3" rx="1.5" fill="#7F77DD"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.8 12.4a9.5 9.5 0 0 1 12.4 0"/><path d="M9.2 15.8a4.6 4.6 0 0 1 5.6 0"/></g><circle cx="12" cy="19" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></g></symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></g></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" fill="currentColor"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><g fill="currentColor"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></g></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5" stroke-linecap="round"/></g></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/></g><circle cx="12" cy="7.6" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9a14 14 0 0 1 6-3.3M15.5 5.7a14 14 0 0 1 6 3.3"/><path d="M5.8 12.4a9.5 9.5 0 0 1 3-1.8M15.2 10.6a9.5 9.5 0 0 1 3 1.8"/><path d="M3 3l18 18"/></g><circle cx="12" cy="19" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11L12 4l8.5 7M6 9.5V20h12V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- INICIANDO -->
+<section id="s-boot" class="screen">
+  <div class="center">
+    <img class="boot-img" src="logo.png" alt="Start Play">
+    <div class="boot-sub" id="boot-sub" style="color:rgba(255,255,255,.85);margin-top:1.6rem">Iniciando…</div>
+    <div class="dots"><i></i><i></i><i></i></div>
+  </div>
+</section>
+
+<!-- PRIMEIRA CONFIGURAÇÃO -->
+<section id="s-setup" class="screen opaque">
+  <div class="pad">
+    <div class="top">
+      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="stat"><span class="clock" data-clock></span></div>
+    </div>
+    <div style="margin-top:2.4rem">
+      <h1>Vamos ligar esta tela</h1>
+      <p class="lead">Conecte a internet e informe o endereço do seu player Start Play. Enquanto isso, você pode ver a demonstração.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><b>1 · Internet</b><span id="su-net"><i class="dot"></i>Verificando…</span></div>
+      <div class="step"><b>2 · Player</b><span id="su-player"><i class="dot warn"></i>Não configurado</span></div>
+    </div>
+    <div class="tiles w3" style="margin-top:1.8rem">
+      <button class="tile primary" data-f data-act="url"><div class="ic"><svg><use xlink:href="#i-link"/></svg></div><div class="tx"><div class="t1">Endereço do player</div><div class="t2">Digite o link do seu painel</div></div></button>
+      <button class="tile" data-f data-act="wifi"><div class="ic"><svg><use xlink:href="#i-wifi"/></svg></div><div class="tx"><div class="t1">Wi‑Fi</div><div class="t2" data-wifi-sub>Escolher rede</div></div></button>
+      <button class="tile" data-f data-act="demo"><div class="ic"><svg><use xlink:href="#i-spark"/></svg></div><div class="tx"><div class="t1">Ver demonstração</div><div class="t2">Anúncios de exemplo</div></div></button>
+      <button class="tile" data-f data-act="apps"><div class="ic"><svg><use xlink:href="#i-grid"/></svg></div><div class="tx"><div class="t1">Aplicativos</div><div class="t2">Outros apps do aparelho</div></div></button>
+      <button class="tile" data-f data-act="settings"><div class="ic"><svg><use xlink:href="#i-gear"/></svg></div><div class="tx"><div class="t1">Ajustes do aparelho</div><div class="t2">Configurações do Android</div></div></button>
+      <button class="tile" data-f data-act="info"><div class="ic"><svg><use xlink:href="#i-info"/></svg></div><div class="tx"><div class="t1">Informações</div><div class="t2">IP, modelo, versão</div></div></button>
+    </div>
+    <div class="foot">Use as setas e <kbd>OK</kbd> do controle. Com o anúncio passando, aperte <kbd>☰</kbd> ou <kbd>VOLTAR</kbd> 3 vezes para abrir o menu.</div>
+  </div>
+</section>
+
+<!-- MENU (por cima do anúncio) -->
+<section id="s-menu" class="screen">
+  <div class="sheet">
+    <div class="top">
+      <div>
+        <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      </div>
+      <div class="stat"><span id="mn-net"><i class="dot"></i>…</span><span class="clock" data-clock></span></div>
+    </div>
+    <div class="tiles w4">
+      <button class="tile primary" data-f data-act="resume"><div class="ic"><svg><use xlink:href="#i-play"/></svg></div><div class="tx"><div class="t1">Voltar ao anúncio</div><div class="t2" id="mn-now">—</div></div></button>
+      <button class="tile" data-f data-act="wifi"><div class="ic"><svg><use xlink:href="#i-wifi"/></svg></div><div class="tx"><div class="t1">Wi‑Fi</div><div class="t2" data-wifi-sub>Escolher rede</div></div></button>
+      <button class="tile" data-f data-act="url"><div class="ic"><svg><use xlink:href="#i-link"/></svg></div><div class="tx"><div class="t1">Endereço do player</div><div class="t2" id="mn-url">—</div></div></button>
+      <button class="tile" data-f data-act="reload"><div class="ic"><svg><use xlink:href="#i-reload"/></svg></div><div class="tx"><div class="t1">Recarregar</div><div class="t2">Busca o conteúdo de novo</div></div></button>
+      <button class="tile" data-f data-act="demo"><div class="ic"><svg><use xlink:href="#i-spark"/></svg></div><div class="tx"><div class="t1">Demonstração</div><div class="t2">Anúncios de exemplo</div></div></button>
+      <button class="tile" data-f data-act="apps"><div class="ic"><svg><use xlink:href="#i-grid"/></svg></div><div class="tx"><div class="t1">Aplicativos</div><div class="t2">Outros apps do aparelho</div></div></button>
+      <button class="tile" data-f data-act="settings"><div class="ic"><svg><use xlink:href="#i-gear"/></svg></div><div class="tx"><div class="t1">Ajustes do aparelho</div><div class="t2">Configurações do Android</div></div></button>
+      <button class="tile" data-f data-act="info"><div class="ic"><svg><use xlink:href="#i-info"/></svg></div><div class="tx"><div class="t1">Informações</div><div class="t2" id="mn-ip">IP, modelo, versão</div></div></button>
+    </div>
+    <div class="menu-hint">O menu fecha sozinho em 1 minuto. <kbd>VOLTAR</kbd> volta ao anúncio.</div>
+  </div>
+</section>
+
+<!-- ENDEREÇO DO PLAYER -->
+<section id="s-url" class="screen opaque">
+  <div class="pad">
+    <div class="top">
+      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="stat"><span class="clock" data-clock></span></div>
+    </div>
+    <div style="margin-top:2.2rem;max-width:48rem">
+      <h2>Endereço do player</h2>
+      <p class="lead">É o link da página do player do seu painel Start Play. A TV abre esse endereço sempre que ligar.</p>
+      <div class="field">
+        <label for="url-in">Link (aperte OK para abrir o teclado)</label>
+        <input id="url-in" class="input" data-f type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://seu-painel.vercel.app/player/">
+        <div class="err-msg" id="url-err"></div>
+      </div>
+      <div class="tiles w3" style="margin-top:.6rem">
+        <button class="tile primary" data-f data-act="url-save"><div class="ic"><svg><use xlink:href="#i-check"/></svg></div><div class="tx"><div class="t1">Salvar e abrir</div><div class="t2">Começa a passar os anúncios</div></div></button>
+        <button class="tile" data-f data-act="url-clear"><div class="ic"><svg><use xlink:href="#i-trash"/></svg></div><div class="tx"><div class="t1">Remover endereço</div><div class="t2">Volta para a configuração</div></div></button>
+        <button class="tile" data-f data-act="back"><div class="ic"><svg><use xlink:href="#i-back"/></svg></div><div class="tx"><div class="t1">Voltar</div><div class="t2">Sem salvar</div></div></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APLICATIVOS -->
+<section id="s-apps" class="screen opaque">
+  <div class="pad">
+    <div class="top">
+      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="sep"></span>Aplicativos</div>
+      <div class="stat"><span class="small">Escolha e aperte OK · <kbd>VOLTAR</kbd> sai</span><span class="clock" data-clock></span></div>
+    </div>
+    <div class="scroll" id="apps-scroll"><div class="scroll-in tiles w4" id="apps-list"></div></div>
+  </div>
+</section>
+
+<!-- INFORMAÇÕES -->
+<section id="s-info" class="screen opaque">
+  <div class="pad">
+    <div class="top">
+      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="sep"></span>Informações</div>
+      <div class="stat"><span class="clock" data-clock></span></div>
+    </div>
+    <div class="rows" id="info-rows"></div>
+    <div class="tiles w4" style="margin-top:1.2rem">
+      <button class="tile" data-f data-act="back"><div class="ic"><svg><use xlink:href="#i-back"/></svg></div><div class="tx"><div class="t1">Voltar</div><div class="t2">Ao menu</div></div></button>
+      <button class="tile" data-f data-act="home-settings"><div class="ic"><svg><use xlink:href="#i-home"/></svg></div><div class="tx"><div class="t1">Tela inicial padrão</div><div class="t2" id="inf-home-sub">Escolher app inicial</div></div></button>
+      <button class="tile" data-f data-act="clear-cache"><div class="ic"><svg><use xlink:href="#i-trash"/></svg></div><div class="tx"><div class="t1">Limpar cache</div><div class="t2">Baixa tudo de novo</div></div></button>
+      <button class="tile" data-f data-act="display"><div class="ic"><svg><use xlink:href="#i-gear"/></svg></div><div class="tx"><div class="t1">Tela e imagem</div><div class="t2">Resolução, ajuste de bordas</div></div></button>
+    </div>
+  </div>
+</section>
+
+<!-- SEM CONEXÃO -->
+<section id="s-offline" class="screen opaque">
+  <div class="pad">
+    <div class="top">
+      <div class="brand"><img class="lg" src="logo.png" alt="Start Play"></div>
+      <div class="stat"><span id="off-net"><i class="dot"></i>…</span><span class="clock" data-clock></span></div>
+    </div>
+    <div style="margin-top:3rem">
+      <div class="big-ic" style="color:var(--warn)"><svg><use xlink:href="#i-off"/></svg></div>
+      <h1>Não consegui abrir o player</h1>
+      <p class="lead">Tentando de novo em <span class="count" id="off-count">20</span> s. Confira se o Wi‑Fi está conectado.</p>
+      <p class="small" id="off-desc" style="margin-top:.5rem"></p>
+    </div>
+    <div class="tiles w4" style="margin-top:1.8rem">
+      <button class="tile primary" data-f data-act="retry"><div class="ic"><svg><use xlink:href="#i-reload"/></svg></div><div class="tx"><div class="t1">Tentar agora</div><div class="t2" id="off-host">—</div></div></button>
+      <button class="tile" data-f data-act="wifi"><div class="ic"><svg><use xlink:href="#i-wifi"/></svg></div><div class="tx"><div class="t1">Wi‑Fi</div><div class="t2" data-wifi-sub>Escolher rede</div></div></button>
+      <button class="tile" data-f data-act="url"><div class="ic"><svg><use xlink:href="#i-link"/></svg></div><div class="tx"><div class="t1">Endereço do player</div><div class="t2">Conferir o link</div></div></button>
+      <button class="tile" data-f data-act="demo"><div class="ic"><svg><use xlink:href="#i-spark"/></svg></div><div class="tx"><div class="t1">Demonstração</div><div class="t2">Passa sem internet</div></div></button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var DEMO = "file:///android_asset/demo.html";
+  var KEY = "sf_url";
+  var S = { screen:null, playing:false, failed:false, cur:null, retryT:null, retryN:0, idleT:null, info:{} };
+
+  // ---------- ponte com o Android (ou simulação no navegador) ----------
+  var TV = window.TV || {
+    close:function(){ log("close") }, play:function(u){ log("play "+u) }, reload:function(){ log("reload") },
+    stop:function(){}, clearCache:function(){ log("clearCache") }, toast:function(t){ log("toast "+t) },
+    intentUrl:function(){ return "" }, openSettings:function(a){ log("settings "+a); return true },
+    launch:function(p){ log("launch "+p); return true },
+    info:function(){ return JSON.stringify({model:"MXQ Pro 4K 5G",maker:"rockchip",hw:"rk30board",android:"7.1.2",sdk:25,w:1920,h:1080,dpi:240,version:"1.0.0",home:"com.screenflow.tv",self:"com.screenflow.tv",net:"WIFI",online:true,ssid:"\"Loja Centro 5G\"",ip:"192.168.0.25 (wlan0)"}) },
+    apps:function(){ return JSON.stringify([
+      {pkg:"com.google.android.youtube.tv",label:"YouTube",cat:"android.intent.category.LEANBACK_LAUNCHER"},
+      {pkg:"com.android.chrome",label:"Chrome",cat:"android.intent.category.LAUNCHER"},
+      {pkg:"com.android.settings",label:"Configurações",cat:"android.intent.category.LAUNCHER"},
+      {pkg:"com.android.vending",label:"Play Store",cat:"android.intent.category.LAUNCHER"},
+      {pkg:"com.mbox.launcher",label:"MBox Launcher",cat:"android.intent.category.HOME"},
+      {pkg:"com.android.music",label:"Música",cat:"android.intent.category.LAUNCHER"},
+      {pkg:"com.android.gallery3d",label:"Galeria",cat:"android.intent.category.LAUNCHER"},
+      {pkg:"com.screenflow.tv",label:"Start Play",cat:"android.intent.category.HOME"}]) }
+  };
+  function log(t){ if(window.console) console.log("[TV] "+t) }
+  function call(fn, dflt){ try { var r = fn(); return (r === undefined || r === null) ? dflt : r } catch(e){ return dflt } }
+  function parse(s, d){ try { return JSON.parse(s) } catch(e){ return d } }
+  function $(id){ return document.getElementById(id) }
+  function all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)) }
+
+  // ---------- endereço salvo ----------
+  function getUrl(){ try { return localStorage.getItem(KEY) || "" } catch(e){ return "" } }
+  function setUrl(u){ try { if(u) localStorage.setItem(KEY, u); else localStorage.removeItem(KEY) } catch(e){} }
+  function normUrl(u){
+    u = (u || "").replace(/^\s+|\s+$/g, "");
+    if(!u) return "";
+    if(!/^(https?:\/\/|file:)/i.test(u)) u = "https://" + u;
+    return u;
+  }
+  function hostOf(u){
+    if(!u) return "";
+    if(u === DEMO) return "Demonstração";
+    var m = /^https?:\/\/([^\/?#]+)/i.exec(u); return m ? m[1] : u;
+  }
+
+  // ---------- telas ----------
+  function show(name){
+    all(".screen").forEach(function(s){ s.classList.remove("on") });
+    S.screen = name;
+    if(!name) return;
+    $("s-" + name).classList.add("on");
+    refresh();
+    focusFirst();
+    armIdle();
+  }
+  function focusFirst(){
+    var list = navItems();
+    if(list.length) list[0].focus();
+  }
+  function navItems(){
+    if(!S.screen) return [];
+    return all("#s-" + S.screen + " [data-f]").filter(function(el){ return el.offsetParent !== null });
+  }
+
+  // navegação com as setas do controle
+  function move(k){
+    var list = navItems(); if(!list.length) return;
+    var cur = document.activeElement;
+    if(list.indexOf(cur) < 0){ list[0].focus(); return }
+    var r = cur.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    var best = null, bs = 1e9;
+    list.forEach(function(el){
+      if(el === cur) return;
+      var q = el.getBoundingClientRect(), x = q.left + q.width/2, y = q.top + q.height/2;
+      var dx = x - cx, dy = y - cy, p, s;
+      if(k === 39){ if(dx <= 4) return; p = dx; s = Math.abs(dy) }
+      else if(k === 37){ if(dx >= -4) return; p = -dx; s = Math.abs(dy) }
+      else if(k === 40){ if(dy <= 4) return; p = dy; s = Math.abs(dx) }
+      else { if(dy >= -4) return; p = -dy; s = Math.abs(dx) }
+      var score = p + s * 2.5;
+      if(score < bs){ bs = score; best = el }
+    });
+    if(best){ best.focus(); keepVisible(best) }
+  }
+  function keepVisible(el){
+    var box = $("apps-scroll"); if(S.screen !== "apps") return;
+    var inner = $("apps-list");
+    var top = el.offsetTop, h = el.offsetHeight, view = box.clientHeight;
+    var cur = S.appsOff || 0;
+    if(top + cur < 0) cur = -top;
+    else if(top + h + cur > view) cur = view - top - h - 16;
+    S.appsOff = Math.min(0, cur);
+    inner.style.webkitTransform = inner.style.transform = "translateY(" + S.appsOff + "px)";
+  }
+
+  document.addEventListener("keydown", function(e){
+    armIdle();
+    var k = e.keyCode, a = document.activeElement, isInput = a && a.tagName === "INPUT";
+    if(k >= 37 && k <= 40){
+      if(isInput && (k === 37 || k === 39)) return;
+      e.preventDefault(); move(k); return;
+    }
+    if(k === 27){ e.preventDefault(); uiBack() } // Esc (teste no computador)
+  }, true);
+
+  document.addEventListener("click", function(e){
+    var el = e.target;
+    while(el && el !== document && !el.getAttribute("data-act")) el = el.parentNode;
+    if(!el || el === document) return;
+    act(el.getAttribute("data-act"), el);
+  });
+
+  // ---------- ações ----------
+  function act(name, el){
+    switch(name){
+      case "resume": closeMenu(); break;
+      case "wifi":
+        if(!call(function(){ return TV.openSettings("android.settings.WIFI_SETTINGS") }, false))
+          call(function(){ return TV.openSettings("android.settings.SETTINGS") }, false);
+        break;
+      case "settings": call(function(){ return TV.openSettings("android.settings.SETTINGS") }, false); break;
+      case "display":
+        if(!call(function(){ return TV.openSettings("android.settings.DISPLAY_SETTINGS") }, false))
+          call(function(){ return TV.openSettings("android.settings.SETTINGS") }, false);
+        break;
+      case "home-settings":
+        if(!call(function(){ return TV.openSettings("android.settings.HOME_SETTINGS") }, false))
+          call(function(){ return TV.openSettings("android.settings.SETTINGS") }, false);
+        break;
+      case "url": openUrl(); break;
+      case "url-save": saveUrl(); break;
+      case "url-clear": setUrl(""); S.playing = false; S.cur = null; call(function(){ TV.stop() }); show("setup"); break;
+      case "reload": TV.reload(); closeMenu(); break;
+      case "demo": play(DEMO); break;
+      case "apps": openApps(); break;
+      case "app": var ok = call(function(){ return TV.launch(el.getAttribute("data-pkg")) }, false);
+        if(!ok) call(function(){ TV.toast("Não consegui abrir esse app") }); break;
+      case "info": show("info"); break;
+      case "clear-cache": TV.clearCache(); call(function(){ TV.toast("Cache limpo. Recarregando…") }); closeMenu(); break;
+      case "retry": play(S.cur || getUrl()); break;
+      case "back": uiBack(); break;
+    }
+  }
+
+  function play(u){
+    if(!u){ show("setup"); return }
+    stopRetry();
+    S.cur = u; S.playing = true; S.failed = false;
+    show(null);
+    TV.play(u);
+  }
+  function closeMenu(){
+    if(!S.playing){ show("setup"); return }
+    if(S.failed){ play(S.cur); return }
+    show(null);
+    TV.close();
+  }
+  function home(){ return S.playing ? "menu" : "setup" }
+
+  window.openMenu = function(){ show(home()) };
+  window.uiBack = function(){
+    var s = S.screen;
+    if(s === "menu") closeMenu();
+    else if(s === "url" || s === "apps" || s === "info") show(home());
+    else if(s === "offline") show("menu");
+    else if(s === null && S.playing) closeMenu();
+  };
+  window.onAppResume = function(){ refresh() };
+  window.applyIntentUrl = function(){
+    var u = normUrl(call(function(){ return TV.intentUrl() }, ""));
+    if(u){ setUrl(u); play(u) }
+  };
+  window.onPlayerError = function(desc, url){
+    if(!S.cur || S.cur.indexOf("file:") === 0) return;
+    S.failed = true;
+    $("off-desc").textContent = desc ? ("Detalhe: " + desc) : "";
+    $("off-host").textContent = hostOf(S.cur);
+    show("offline");
+    startRetry();
+  };
+
+  function startRetry(){
+    stopRetry();
+    S.retryN = Math.min(60, 20 + (S.retries || 0) * 10);
+    S.retries = (S.retries || 0) + 1;
+    $("off-count").textContent = S.retryN;
+    S.retryT = setInterval(function(){
+      S.retryN--;
+      $("off-count").textContent = Math.max(0, S.retryN);
+      if(S.retryN <= 0){ stopRetry(); if(S.screen === "offline") play(S.cur) }
+    }, 1000);
+  }
+  function stopRetry(){ if(S.retryT){ clearInterval(S.retryT); S.retryT = null } }
+
+  // fecha o menu sozinho se ninguém mexer
+  function armIdle(){
+    if(S.idleT) clearTimeout(S.idleT);
+    if(!S.playing || S.failed) return;
+    if(S.screen === "menu" || S.screen === "info" || S.screen === "apps" || S.screen === "url")
+      S.idleT = setTimeout(function(){ closeMenu() }, 60000);
+  }
+
+  // ---------- endereço ----------
+  function openUrl(){
+    var u = getUrl();
+    $("url-in").value = (u && u !== DEMO) ? u : "";
+    $("url-err").textContent = "";
+    show("url");
+  }
+  function saveUrl(){
+    var u = normUrl($("url-in").value);
+    if(!u){ $("url-err").textContent = "Digite o endereço do player."; $("url-in").focus(); return }
+    if(!/^https?:\/\/[^\/\s]+\.[^\/\s]+/i.test(u) && !/^https?:\/\/(\d+\.){3}\d+/.test(u)){
+      $("url-err").textContent = "Esse endereço não parece completo. Ex.: https://seu-painel.vercel.app/player/"; return
+    }
+    setUrl(u);
+    S.retries = 0;
+    play(u);
+  }
+
+  // ---------- aplicativos ----------
+  var COLORS = ["#7F77DD","#2F9E8F","#C9772B","#4C83D6","#B8527A","#6E8B3D"];
+  function colorFor(s){ var h = 0; for(var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return COLORS[Math.abs(h) % COLORS.length] }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c] }) }
+  function openApps(){
+    var self = S.info.self || "com.screenflow.tv";
+    var list = parse(call(function(){ return TV.apps() }, "[]"), []);
+    var seen = {}, out = [];
+    list.forEach(function(a){
+      if(!a || !a.pkg || a.pkg === self) return;
+      var isHome = a.cat === "android.intent.category.HOME";
+      if(seen[a.pkg]){ if(isHome) seen[a.pkg].home = true; return }
+      a.home = isHome; seen[a.pkg] = a; out.push(a);
+    });
+    out.sort(function(x, y){ if(x.home !== y.home) return x.home ? -1 : 1; return (x.label || "").localeCompare(y.label || "") });
+    var html = out.map(function(a){
+      var name = a.label || a.pkg;
+      return '<button class="tile" data-f data-act="app" data-pkg="' + esc(a.pkg) + '">' +
+        '<div class="ic" style="background:' + colorFor(a.pkg) + '"><span class="av">' + esc(name.charAt(0).toUpperCase()) + '</span></div>' +
+        '<div class="tx"><div class="t1">' + esc(name) + '</div><div class="t2">' + (a.home ? '<span class="tag">TELA INICIAL ORIGINAL</span>' : esc(a.pkg)) + '</div></div></button>';
+    }).join("");
+    $("apps-list").innerHTML = html || '<p class="small">Nenhum app encontrado.</p>';
+    S.appsOff = 0;
+    $("apps-list").style.webkitTransform = $("apps-list").style.transform = "translateY(0)";
+    show("apps");
+  }
+
+  // ---------- status (rede, relógio, informações) ----------
+  function refresh(){
+    S.info = parse(call(function(){ return TV.info() }, "{}"), {}) || {};
+    var i = S.info;
+    var ssid = (i.ssid || "").replace(/^"|"$/g, "");
+    if(ssid.indexOf("unknown") >= 0) ssid = "";
+    var online = !!i.online;
+    var netTxt = online ? (i.net === "WIFI" ? ("Wi‑Fi" + (ssid ? " · " + ssid : "")) : (i.net === "ETHERNET" ? "Cabo de rede" : (i.net || "Conectado"))) : "Sem internet";
+    var dot = '<i class="dot ' + (online ? "ok" : "err") + '"></i>';
+    $("su-net").innerHTML = dot + esc(netTxt);
+    $("mn-net").innerHTML = dot + esc(netTxt);
+    $("off-net").innerHTML = dot + esc(netTxt);
+    all("[data-wifi-sub]").forEach(function(el){ el.textContent = online && ssid ? ssid : (online ? "Conectado" : "Toque para conectar") });
+    var u = getUrl();
+    $("su-player").innerHTML = u ? ('<i class="dot ok"></i>' + esc(hostOf(u))) : '<i class="dot warn"></i>Não configurado';
+    $("mn-url").textContent = u ? hostOf(u) : "Não configurado";
+    $("mn-now").textContent = S.cur ? ("Tocando: " + hostOf(S.cur)) : "—";
+    var ip = (i.ip || "").split(" ")[0];
+    $("mn-ip").textContent = ip ? ("IP " + ip) : "IP, modelo, versão";
+    var isHome = i.home && i.self && i.home === i.self;
+    $("inf-home-sub").textContent = isHome ? "Start Play já é a tela inicial" : "Hoje: " + (i.home || "não definida");
+    var rows = [
+      ["Aparelho", [i.maker, i.model].filter(Boolean).join(" ") || "—"],
+      ["Android", (i.android || "—") + (i.sdk ? "  (API " + i.sdk + ")" : "")],
+      ["Imagem", i.w ? (i.w + " × " + i.h + "  ·  " + i.dpi + " dpi") : "—"],
+      ["Rede", netTxt],
+      ["Endereço IP", i.ip || "—"],
+      ["Player", u ? u : "Não configurado"],
+      ["Tela inicial", isHome ? "Start Play ✓" : (i.home || "—")],
+      ["Versão do app", (i.version || "—") + (i.hw ? "  ·  " + i.hw : "")]
+    ];
+    $("info-rows").innerHTML = rows.map(function(r){ return '<div class="r"><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span></div>' }).join("");
+    tick();
+  }
+  var DIAS = ["dom.","seg.","ter.","qua.","qui.","sex.","sáb."];
+  var MESES = ["jan.","fev.","mar.","abr.","mai.","jun.","jul.","ago.","set.","out.","nov.","dez."];
+  function two(n){ return (n < 10 ? "0" : "") + n }
+  function tick(){
+    var d = new Date();
+    var t = DIAS[d.getDay()] + " " + d.getDate() + " " + MESES[d.getMonth()] + "  " + two(d.getHours()) + ":" + two(d.getMinutes());
+    all("[data-clock]").forEach(function(el){ el.textContent = t });
+  }
+  setInterval(function(){ if(S.screen) tick() }, 15000);
+
+  // ---------- início ----------
+  function boot(){
+    show("boot");
+    var iu = normUrl(call(function(){ return TV.intentUrl() }, ""));
+    if(iu) setUrl(iu);
+    var u = getUrl();
+    $("boot-sub").textContent = u ? ("Abrindo " + hostOf(u) + "…") : "Iniciando…";
+    setTimeout(function(){ if(u) play(u); else show("setup") }, 1600);
+  }
+  window.ScreenFlowUI = { show:show, play:play, state:S };
+  boot();
+})();
+</script>
+</body>
+</html>

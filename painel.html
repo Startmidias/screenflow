@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0E1014">
-<title>ScreenFlow · Painel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22%3E%3Cstop offset=%220%22 stop-color=%22%23FC0491%22/%3E%3Cstop offset=%221%22 stop-color=%22%231D02A9%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22url(%23g)%22/%3E%3Cpath d=%22M12 9v14l11-7z%22 fill=%22white%22/%3E%3C/svg%3E">
+<title>Start Play · Painel</title>
 <style>
   :root{
     --bg:#F5F6F8; --card:#FFFFFF; --line:#E4E6EB; --text:#14161B; --muted:#646B78;
-    --acc:#6A61D6; --acc-soft:#EEEDFB; --ok:#1F8F3A; --ok-soft:#E6F4EA; --warn:#A8620B; --warn-soft:#FBF0E1;
+    --acc:#B3108F; --acc-soft:#FCE8F4; --grad:linear-gradient(90deg,#E6037F,#4A03B0); --ok:#1F8F3A; --ok-soft:#E6F4EA; --warn:#A8620B; --warn-soft:#FBF0E1;
     --err:#C22F2F; --err-soft:#FBEAEA; --gray-soft:#EEF0F3; --r:12px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -23,7 +24,9 @@
   .top-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:0 16px;height:56px}
   .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
   .brand svg{width:26px;height:26px}
-  .brand em{font-style:normal;color:#A39DF0;font-weight:600}
+  .brand em{font-style:normal;color:#FF7AC6;font-weight:600}
+  .brand .lg{height:24px;width:auto;display:block}
+  .brand .tag-p{font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.14);padding:2px 8px;border-radius:999px;letter-spacing:.02em}
   .tabs{display:flex;gap:4px;margin-left:8px;overflow-x:auto}
   .tab{padding:8px 12px;border-radius:8px;color:#C5CAD3;font-weight:500;white-space:nowrap}
   .tab.on{background:#232838;color:#fff}
@@ -37,11 +40,11 @@
   h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
   .sub{color:var(--muted);font-size:14px}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--acc);color:#fff}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--acc);background:var(--grad);color:#fff}
   .btn:hover{filter:brightness(1.06)}
   .btn:disabled{opacity:.55;cursor:default}
-  .btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
-  .btn.danger{background:var(--err)}
+  .btn.ghost{background:var(--card);background-image:none;color:var(--text);border:1px solid var(--line)}
+  .btn.danger{background:var(--err);background-image:none}
   .btn.sm{height:34px;padding:0 12px;font-size:14px}
   .btn:focus-visible,.icon:focus-visible,.tab:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
@@ -97,9 +100,10 @@
   .modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 
   /* login */
-  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0E1014}
+  .auth{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;background:linear-gradient(90deg,#FC0491,#1D02A9)}
+  .auth-logo{width:260px;max-width:70vw;height:auto;display:block}
   .auth .modal{max-width:400px;padding:28px}
-  .auth .brand{color:var(--text);font-size:18px;margin-bottom:18px}
+  .auth .brand{color:var(--text);font-size:18px;margin-bottom:14px}
   .auth p{color:var(--muted);font-size:14px;margin-bottom:16px}
   .auth .btn{width:100%;margin-top:4px}
   .auth .alt{text-align:center;margin-top:14px;font-size:14px}
@@ -152,8 +156,9 @@
 
 <!-- LOGIN -->
 <div class="auth hide" id="v-auth">
+  <img class="auth-logo" src="logo.png" alt="Start Play">
   <div class="modal">
-    <div class="brand"><svg><use href="#logo"/></svg>ScreenFlow <em>Painel</em></div>
+    <div class="brand">Painel</div>
     <div id="auth-box"></div>
   </div>
 </div>
@@ -161,7 +166,7 @@
 <!-- APP -->
 <div id="v-app" class="hide">
   <header class="top"><div class="top-in">
-    <div class="brand"><svg><use href="#logo"/></svg><span class="full">ScreenFlow</span></div>
+    <div class="brand"><img class="lg" src="logo.png" alt="Start Play"><span class="tag-p full">Painel</span></div>
     <nav class="tabs">
       <button class="tab" data-tab="anuncios">Anúncios</button>
       <button class="tab" data-tab="telas">Telas</button>
@@ -525,9 +530,10 @@ async function pageScreens() {
   const on = state.screens.filter(isOnline).length;
   main.innerHTML = `
     <div class="head"><div><h1>Telas</h1><div class="sub">${state.screens.length} tela(s) · ${on} ligada(s) agora</div></div></div>
-    <div class="card help"><div><b>Ligar uma TV nova</b>No TV Box com o app ScreenFlow TV, abra o menu → <b>Endereço do player</b> e digite:
+    <div class="card help"><div><b>Ligar uma TV nova</b>No TV Box com o app Start Play, abra o menu → <b>Endereço do player</b> e digite:
       <div style="margin-top:6px"><code>${esc(host)}</code></div>
-      <div class="sub" style="margin-top:6px">Em até 1 minuto ela aparece nesta lista. Depois é só dar um nome.</div></div></div>
+      <div class="sub" style="margin-top:6px">Em até 1 minuto ela aparece nesta lista. Depois é só dar um nome.</div>
+      <div class="sub" style="margin-top:10px">Instalar ou atualizar o app na TV: no navegador do TV Box, abra <code>${esc(host)}/startplay.apk</code></div></div></div>
     <div class="list" id="slist">${state.screens.length ? state.screens.map(s => {
       const live = isOnline(s), inf = s.info || {};
       const dev = [inf.model, inf.android ? "Android " + inf.android : "", inf.ip ? String(inf.ip).split(" ")[0] : ""].filter(Boolean).join(" · ");

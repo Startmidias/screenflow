@@ -1,0 +1,25 @@
+!!brut.androlib.apk.ApkInfo
+apkFileName: ScreenFlowTV.apk
+compressionType: false
+doNotCompress:
+- resources.arsc
+- png
+- mp4
+isFrameworkApk: false
+packageInfo:
+  forcedPackageId: 127
+  renameManifestPackage: null
+resourcesAreCompressed: false
+sdkInfo:
+  minSdkVersion: 21
+  targetSdkVersion: 28
+sharedLibrary: false
+sparseResources: false
+usesFramework:
+  ids:
+  - 1
+  tag: null
+version: 2.9.3
+versionInfo:
+  versionCode: 2
+  versionName: 1.1.0
