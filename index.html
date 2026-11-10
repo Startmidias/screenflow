@@ -14,7 +14,7 @@
   .layer.on{opacity:1}
   .layer .bd{position:absolute;left:-6%;top:-6%;width:112%;height:112%;background-size:cover;background-position:center;
     -webkit-filter:blur(2.2rem) brightness(.55);filter:blur(2.2rem) brightness(.55)}
-  .layer img,.layer video{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:block}
+  .layer img,.layer video,.layer canvas{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:block}
   .layer video{background:#000}
   #msg{position:absolute;left:0;top:0;width:100%;height:100%;display:none;
     background:#FC0491;background:-webkit-linear-gradient(left,#FC0491,#1D02A9);background:linear-gradient(90deg,#FC0491,#1D02A9)}
@@ -53,7 +53,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "2.0.0";
+  var VERSION = "2.1.0";
   var CFG = window.SCREENFLOW || {};
   var SYNC_MS = 60000;
   var IMG_TIMEOUT = 25000;
@@ -109,7 +109,8 @@
     var st = { v:VERSION, boots:boots, up:Math.round((Date.now() - S.boot) / 1000), n:S.items.length,
                now:S.cur ? S.cur.title : null, ok:S.ok, err:S.err, online:S.online,
                vw:window.innerWidth, vh:window.innerHeight };
-    if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 180); st.lastErrAt = S.lastErrAt }
+    if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 240); st.lastErrAt = S.lastErrAt }
+    if(S.fallback) st.fallback = S.fallback;
     if(performance && performance.memory) st.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
     return st;
   }
@@ -165,6 +166,8 @@
   function apply(items){
     if(S.applied && sameList(items, S.items)) return;
     S.applied = true;
+    var keep = {}; for(var k = 0; k < items.length; k++) keep[items[k].url] = 1;
+    for(var u in blobCache) if(!keep[u]){ URL.revokeObjectURL(blobCache[u]); delete blobCache[u] }
     var wasEmpty = !S.items.length;
     S.items = items;
     if(!items.length){
@@ -257,26 +260,68 @@
       var img = new Image();
       img.decoding = "async";
       var done = false;
-      img.onload = function(){
-        if(done || !alive()) return; done = true;
-        var w = img.naturalWidth, h = img.naturalHeight;
+      function showImage(el, w, h, bdUrl){
         if(!w || !h){ skip("imagem vazia"); return }
         if(w * h > MAX_PIXELS){ skip("imagem grande demais (" + w + "x" + h + ")"); return }
         // foto em pé ou de outro formato: fundo desfocado com a própria foto
         var screenRatio = window.innerWidth / Math.max(1, window.innerHeight), ratio = w / h;
-        if(Math.abs(ratio - screenRatio) / screenRatio > 0.12){
+        if(bdUrl && Math.abs(ratio - screenRatio) / screenRatio > 0.12){
           var bd = document.createElement("div"); bd.className = "bd";
-          bd.style.backgroundImage = "url(\"" + item.url.replace(/"/g, "%22") + "\")";
+          bd.style.backgroundImage = "url(\"" + bdUrl.replace(/"/g, "%22") + "\")";
           L.appendChild(bd);
         }
-        L.appendChild(img);
+        L.appendChild(el);
         show();
         S.timer = setTimeout(function(){ if(alive()) finish() }, Math.max(3, item.duration || 10) * 1000);
+      }
+      img.onload = function(){
+        if(done || !alive()) return; done = true;
+        showImage(img, img.naturalWidth, img.naturalHeight, item.url);
       };
-      img.onerror = function(){ if(done) return; done = true; skip("imagem não abriu") };
+      img.onerror = function(){
+        if(done || !alive()) return; done = true;
+        loadViaBlob(item, function(e, el, how){
+          if(!alive()) return;
+          if(e){ skip("imagem não abriu: " + e.message); return }
+          S.fallback = how;                      // registra que precisou do plano B
+          showImage(el, el.naturalWidth || el.width, el.naturalHeight || el.height, el.src || null);
+        });
+      };
       S.timer = setTimeout(function(){ if(!done){ done = true; img.src = ""; skip("imagem demorou demais para abrir") } }, IMG_TIMEOUT);
       img.src = item.url;
     }
+  }
+
+  // Plano B para imagens que o <img> não abre nesta TV Box:
+  // baixa o arquivo, tenta abrir de novo e, se precisar, decodifica num canvas.
+  var blobCache = {};   // url -> endereço local (evita baixar de novo e não acumula memória)
+  function loadViaBlob(item, cb){
+    var ct = "";
+    var cached = blobCache[item.url];
+    if(cached){
+      var ci = new Image();
+      ci.onload = function(){ cb(null, ci, "blob") };
+      ci.onerror = function(){ delete blobCache[item.url]; URL.revokeObjectURL(cached); loadViaBlob(item, cb) };
+      ci.src = cached; return;
+    }
+    fetch(item.url, { cache:"no-store" })
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); ct = r.headers.get("content-type") || ""; return r.blob() })
+      .then(function(b){
+        var u = URL.createObjectURL(b), im = new Image();
+        im.onload = function(){ blobCache[item.url] = u; cb(null, im, "blob") };
+        im.onerror = function(){
+          URL.revokeObjectURL(u);
+          if(!window.createImageBitmap){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes)")); return }
+          createImageBitmap(b).then(function(bmp){
+            var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+            c.getContext("2d").drawImage(bmp, 0, 0); if(bmp.close) bmp.close();
+            c.naturalWidth = c.width; c.naturalHeight = c.height;
+            cb(null, c, "canvas");
+          })["catch"](function(e){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes): " + (e && (e.name || e.message)))) });
+        };
+        im.src = u;
+      })
+      ["catch"](function(e){ cb(new Error("download falhou: " + (e && e.message))) });
   }
 
   function preloadNext(){
