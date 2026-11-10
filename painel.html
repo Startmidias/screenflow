@@ -117,6 +117,17 @@
   .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   .filters .in{width:auto;min-width:160px}
   .print-head{display:none}
+  .tvline{font-size:12.5px;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .tvline .chip{font-size:12px;padding:2px 8px}
+  .warn-txt{color:var(--warn)}
+  .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;background:var(--warn-soft);border-color:#F1D9B5}
+  .banner b{color:var(--warn)}
+  .tvprev{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;margin-top:10px}
+  .tvprev .bd{position:absolute;inset:-6%;background-size:cover;background-position:center;filter:blur(18px) brightness(.55)}
+  .tvprev img,.tvprev video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .tvprev .lbl{position:absolute;left:8px;top:8px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:999px;letter-spacing:.03em}
+  .ok-box{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .info-box{background:var(--acc-soft);color:var(--acc);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px}
 
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14161B;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:90vw}
   .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
@@ -151,6 +162,8 @@
   <symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></symbol>
   <symbol id="edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+  <symbol id="reload" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></g></symbol>
   <symbol id="trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </defs></svg>
 
@@ -198,7 +211,7 @@ const isoDay = d => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate
 const today = () => isoDay(new Date());
 const fmtDay = s => { if (!s) return ""; const [y, m, d] = s.split("-"); return `${d}/${m}/${y.slice(2)}` };
 const fmtSecs = s => s < 60 ? `${s}s` : (s < 3600 ? `${Math.floor(s / 60)}min ${s % 60 ? (s % 60) + "s" : ""}` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}min`).trim();
-const fmtMB = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",") + " MB";
+const fmtMB = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",") + " MB";
 
 function toast(msg, ms = 2800) {
   const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
@@ -350,10 +363,76 @@ const screenName = id => (state.screens.find(s => s.id === id) || {}).name || "t
 // ---------------------------------------------------------------------------
 // Anúncios
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Imagens leves para TV Box (fotos de celular têm 12 MP e travam aparelhos simples)
+// ---------------------------------------------------------------------------
+const MAX_SIDE = 1920, HEAVY = 1.2 * 1048576;
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2));
+async function decodeImage(blob) {
+  if (window.createImageBitmap) { try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); } catch (e) {} }
+  return await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Não consegui ler essa imagem.")); i.src = URL.createObjectURL(blob); });
+}
+async function prepImage(file) {
+  if (file.type === "image/gif") return { file, changed: false };           // GIF pode ser animado: mantém
+  const img = await decodeImage(file);
+  const w0 = img.width || img.naturalWidth, h0 = img.height || img.naturalHeight;
+  const scale = Math.min(1, MAX_SIDE / Math.max(w0, h0));
+  if (scale === 1 && file.size <= HEAVY) return { file, w: w0, h: h0, w0, h0, changed: false };
+  const w = Math.round(w0 * scale), h = Math.round(h0 * scale);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, w, h);
+  g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, w, h);
+  if (img.close) img.close();
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
+  if (!blob || blob.size >= file.size && scale === 1) return { file, w: w0, h: h0, w0, h0, changed: false };
+  const name = (file.name || "imagem").replace(/\.[^.]+$/, "") + ".jpg";
+  return { file: new File([blob], name, { type: "image/jpeg" }), w, h, w0, h0, changed: true, before: file.size };
+}
+const isHeavy = m => m.kind === "image" && (!m.size_bytes || m.size_bytes > HEAVY) && !/\.gif$/i.test(m.path);
+async function optimizeExisting(m) {
+  const r = await fetch(m.url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Não consegui baixar a imagem de "${m.title}".`);
+  const blob = await r.blob();
+  const p = await prepImage(new File([blob], m.path, { type: blob.type || "image/jpeg" }));
+  if (!p.changed) { await sb.from("media").update({ size_bytes: blob.size }).eq("id", m.id); return false; }
+  const newPath = `${uuid()}.jpg`;
+  const up = await sb.storage.from(BUCKET).upload(newPath, p.file, { cacheControl: "31536000", contentType: "image/jpeg", upsert: false });
+  if (up.error) throw up.error;
+  const url = sb.storage.from(BUCKET).getPublicUrl(newPath).data.publicUrl;
+  const { error } = await sb.from("media").update({ path: newPath, url, size_bytes: p.file.size }).eq("id", m.id);
+  if (error) { await sb.storage.from(BUCKET).remove([newPath]); throw error; }
+  await sb.storage.from(BUCKET).remove([m.path]);
+  return true;
+}
+const looksAuto = n => /^(img|dsc|pxl|mvimg|whatsapp|chatgpt|screenshot|captura|imagem|image|photo|foto|video|vid|wp|signal)[\s_-]/i.test(n) || /^\d[\d\s_.-]+$/.test(n);
+
+// exibições de hoje por anúncio (vem do registro que a TV manda)
+async function loadStats() {
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
+  const { data } = await sb.rpc("sf_report", { p_from: d0.toISOString(), p_to: d1.toISOString() });
+  const st = {};
+  (data || []).forEach(r => { const x = st[r.media_id] = st[r.media_id] || { plays: 0, last: null };
+    x.plays += Number(r.plays); if (!x.last || r.last_at > x.last) x.last = r.last_at; });
+  state.stats = st;
+}
+function tvLine(m) {
+  const [st] = statusOf(m);
+  if (st !== "No ar") return "";
+  const x = (state.stats || {})[m.id];
+  const targets = (m.screen_ids && m.screen_ids.length ? state.screens.filter(s => m.screen_ids.includes(s.id)) : state.screens.filter(isAdded));
+  const online = targets.filter(isOnline);
+  if (x && x.plays) return `<div class="tvline"><span class="chip ok">Na TV</span><span class="sub">passou ${x.plays.toLocaleString("pt-BR")}x hoje · última ${ago(x.last)}</span></div>`;
+  if (!online.length) return `<div class="tvline"><span class="chip">Nenhuma tela ligada</span><span class="sub">${targets.length ? "as telas deste anúncio estão desligadas" : "adicione uma tela na aba Telas"}</span></div>`;
+  const fresh = Date.now() - new Date(m.created_at).getTime() < 3 * 60 * 1000;
+  return fresh ? `<div class="tvline"><span class="chip acc">Indo para a TV</span><span class="sub">aparece em até 1 minuto</span></div>`
+    : `<div class="tvline"><span class="chip warn">Ainda não passou hoje</span><span class="sub">veja a aba Telas para saber o que a TV está fazendo</span></div>`;
+}
+
 async function pageMedia() {
   const main = $("#main");
   main.innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
-  try { await Promise.all([loadMedia(), loadScreens()]); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
+  try { await Promise.all([loadMedia(), loadScreens(), loadStats()]); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
+  const heavy = state.media.filter(isHeavy);
   const counts = { "No ar": 0, "Agendado": 0, "Vencido": 0, "Pausado": 0 };
   state.media.forEach(m => counts[statusOf(m)[0]]++);
   main.innerHTML = `
@@ -364,8 +443,23 @@ async function pageMedia() {
       ${counts["Agendado"] ? `<span class="chip acc">${counts["Agendado"]} agendado(s)</span>` : ""}
       ${counts["Vencido"] ? `<span class="chip err">${counts["Vencido"]} vencido(s)</span>` : ""}
       ${counts["Pausado"] ? `<span class="chip">${counts["Pausado"]} pausado(s)</span>` : ""}</div>` : ""}
+    ${heavy.length ? `<div class="card banner" id="heavy"><div><b>${heavy.length} foto(s) pesada(s) para TV Box.</b> <span class="sub">Fotos de celular muito grandes podem não aparecer ou travar a TV.</span></div>
+      <button class="btn sm" id="opt">Otimizar agora</button></div>` : ""}
     <div class="list" id="mlist"></div>`;
   $("#new").addEventListener("click", () => mediaForm());
+  $("#opt")?.addEventListener("click", async () => {
+    const b = $("#opt"); b.disabled = true; let n = 0;
+    try {
+      for (const m of heavy) { b.innerHTML = `<span class="spin"></span> ${++n} de ${heavy.length}…`; await optimizeExisting(m); }
+      toast("Fotos otimizadas! A TV pega a versão nova em até 1 minuto.", 4000);
+    } catch (ex) { toast(friendly(ex), 5000); }
+    pageMedia();
+  });
+  clearInterval(state.poll);
+  state.poll = setInterval(async () => {
+    if (state.tab !== "anuncios" || $("#modal-root").innerHTML) return;
+    try { await Promise.all([loadStats(), loadScreens()]); state.media.forEach(m => { const el = document.querySelector(`[data-id="${m.id}"] .tvslot`); if (el) el.innerHTML = tvLine(m); }); } catch (e) {}
+  }, 60000);
   const list = $("#mlist");
   if (!state.media.length) {
     list.innerHTML = `<div class="card empty"><h3>Nenhum anúncio ainda</h3><div>Envie uma foto ou vídeo e ele aparece nas TVs em até 1 minuto.</div>
@@ -382,7 +476,8 @@ async function pageMedia() {
         <span class="kind">${m.kind === "video" ? "VÍDEO" : "FOTO"} · ${m.duration_sec}s</span></div>
       <div class="info"><div class="t1">${esc(m.title)}</div>
         <div class="t2">${m.advertiser ? esc(m.advertiser) + " · " : ""}${period} · ${esc(where)}</div>
-        <div style="margin-top:6px"><span class="chip ${cls}">${st}</span></div></div>
+        <div style="margin-top:6px"><span class="chip ${cls}">${st}</span>${isHeavy(m) ? ` <span class="chip warn">foto pesada</span>` : ""}</div>
+        <div class="tvslot">${tvLine(m)}</div></div>
       <div class="acts">
         <button class="icon" data-a="up" aria-label="Subir" title="Subir" ${i === 0 ? "disabled" : ""}>${icon("up")}</button>
         <button class="icon" data-a="down" aria-label="Descer" title="Descer" ${i === state.media.length - 1 ? "disabled" : ""}>${icon("down")}</button>
@@ -416,6 +511,11 @@ async function pageMedia() {
   });
 }
 
+function tvPreview(url, isVid) {
+  return `<div class="tvprev">${isVid ? "" : `<div class="bd" style="background-image:url('${esc(url)}')"></div>`}
+    ${isVid ? `<video src="${esc(url)}#t=1" muted preload="metadata" playsinline></video>` : `<img src="${esc(url)}" alt="">`}<span class="lbl">COMO FICA NA TV</span></div>`;
+}
+
 function videoDuration(file) {
   return new Promise(res => {
     const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
@@ -435,7 +535,9 @@ function mediaForm(m) {
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" class="hide">
         <div class="drop ${edit ? "has" : ""}" id="drop" tabindex="0" role="button">${edit
           ? `<div class="preview"><div class="thumb">${m.kind === "video" ? `<video src="${esc(m.url)}#t=1" muted preload="metadata"></video>` : `<img src="${esc(m.url)}" alt="">`}</div><div><strong>Arquivo atual</strong><div class="t2">Clique para trocar</div></div></div>`
-          : `<strong>Escolher foto ou vídeo</strong><div>JPG, PNG, WEBP, MP4 · até ${MAX_MB} MB · ideal na horizontal 1920×1080</div>`}</div></div>
+          : `<strong>Escolher foto ou vídeo</strong><div>JPG, PNG, WEBP, MP4 · até ${MAX_MB} MB · ideal deitada (1920×1080)</div>`}</div>
+        ${edit ? tvPreview(m.url, m.kind === "video") : ""}</div>
+      <div id="prep"></div>
       <div class="field"><label for="title">Título</label><input class="in" id="title" maxlength="120" required value="${esc(m?.title || "")}" placeholder="Ex.: Promoção de verão"></div>
       <div class="field"><label for="adv">Anunciante <span class="sub">(opcional)</span></label><input class="in" id="adv" maxlength="120" value="${esc(m?.advertiser || "")}" placeholder="Ex.: Padaria Central" list="advs">
         <datalist id="advs">${[...new Set(state.media.map(x => x.advertiser).filter(Boolean))].map(a => `<option value="${esc(a)}">`).join("")}</datalist></div>
@@ -463,12 +565,30 @@ function mediaForm(m) {
     err("");
     if (!/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(f.type)) { err("Formato não aceito. Use JPG, PNG, WEBP, GIF, MP4 ou WEBM."); return; }
     if (f.size > MAX_MB * 1048576) { err(`Esse arquivo tem ${fmtMB(f.size)}. O máximo é ${MAX_MB} MB.`); return; }
-    file = f; vidDur = null;
-    const url = URL.createObjectURL(f), isVid = f.type.startsWith("video/");
+    file = null; vidDur = null;
+    const isVid = f.type.startsWith("video/");
+    $("#prep").innerHTML = "";
+    $("#save").disabled = true;
+    let note = "";
+    if (!isVid) {
+      $("#drop").innerHTML = `<div class="preview"><span class="spin dark"></span><div><strong>${esc(f.name)}</strong><div class="t2">Preparando para a TV…</div></div></div>`;
+      try {
+        const p = await prepImage(f);
+        f = p.file;
+        if (p.changed) note = `<div class="ok-box">Otimizada para TV Box: ${p.w0}×${p.h0} → ${p.w}×${p.h} · ${fmtMB(p.before)} → ${fmtMB(f.size)}</div>`;
+        if (p.h > p.w) note += `<div class="info-box">Foto em pé: na TV ela aparece no centro, com a própria foto desfocada no fundo. Para ocupar a tela toda, use uma imagem deitada (1920×1080).</div>`;
+      } catch (ex) { $("#save").disabled = false; err(friendly(ex)); return; }
+    }
+    file = f;
+    const url = URL.createObjectURL(f);
     $("#drop").classList.add("has");
     $("#drop").innerHTML = `<div class="preview"><div class="thumb">${isVid ? `<video src="${url}" muted></video>` : `<img src="${url}" alt="">`}</div>
       <div><strong>${esc(f.name)}</strong><div class="t2">${isVid ? "Vídeo" : "Foto"} · ${fmtMB(f.size)} · clique para trocar</div></div></div>`;
-    if (!$("#title").value) $("#title").value = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 120);
+    $("#prep").innerHTML = note + tvPreview(url, isVid);
+    $("#save").disabled = false;
+    const base = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    if (!$("#title").value && !looksAuto(base)) $("#title").value = base.slice(0, 120);
+    if (!$("#title").value) $("#title").focus();
     if (isVid) {
       vidDur = await videoDuration(f);
       if (vidDur && vidDur > 600) { err("Vídeo com mais de 10 minutos. Envie um vídeo mais curto."); file = null; return; }
@@ -494,7 +614,7 @@ function mediaForm(m) {
     try {
       if (file) {
         const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || file.type.split("/")[1]).toLowerCase();
-        newPath = `${crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2)}.${ext}`;
+        newPath = `${uuid()}.${ext}`;
         const up = await sb.storage.from(BUCKET).upload(newPath, file, { cacheControl: "31536000", contentType: file.type, upsert: false });
         if (up.error) throw up.error;
         row.path = newPath;
@@ -532,11 +652,21 @@ function siteHost() {
 function screenRow(s) {
   const live = isOnline(s), inf = s.info || {}, added = isAdded(s);
   const dev = [inf.model, inf.android ? "Android " + inf.android : "", inf.ip ? String(inf.ip).split(" ")[0] : ""].filter(Boolean).join(" · ");
+  const st = s.status || {}, fresh = s.status_at && (Date.now() - new Date(s.status_at).getTime()) < 5 * 60 * 1000;
+  let play = "";
+  if (live && added) {
+    if (!st.v) play = `<div class="t2 warn-txt">Player antigo nesta TV: clique em Recarregar (ou no controle: menu → Recarregar).</div>`;
+    else if (fresh) play = `<div class="t2">${st.now ? "Tocando agora: <b>" + esc(st.now) + "</b>" : (st.n ? "Carregando anúncios…" : "Sem anúncios para esta tela")} · ${st.ok || 0} exibido(s) desde que ligou</div>`;
+    if (st.v && st.lastErr && st.lastErrAt && Date.now() - new Date(st.lastErrAt).getTime() < 2 * 3600 * 1000)
+      play += `<div class="t2 warn-txt">Último problema ${ago(st.lastErrAt)}: ${esc(st.lastErr)}</div>`;
+  }
   return `<div class="card row" data-id="${esc(s.id)}">
     <div class="info"><div class="t1">${added ? esc(s.name) : `Código <span style="letter-spacing:.06em">${esc(codeOf(s))}</span>`}${added && s.location ? ` <span class="sub">· ${esc(s.location)}</span>` : ""}</div>
       <div class="t2">${added ? "Código " + esc(codeOf(s)) : "Detectada, ainda sem nome"}${dev ? " · " + esc(dev) : ""}</div>
+      ${play}
       <div style="margin-top:6px"><span class="chip ${live ? "ok" : "err"}"><span class="dot"></span>${live ? "Ligada" : "Desligada"} · visto ${ago(s.last_seen)}</span></div></div>
-    <div class="acts">${added
+    <div class="acts">${added && live ? `<button class="icon" data-a="identify" aria-label="Identificar na TV" title="Mostrar o nome na TV">${icon("eye")}</button>
+      <button class="icon" data-a="reload" aria-label="Recarregar a TV" title="Recarregar a TV">${icon("reload")}</button>` : ""}${added
       ? `<button class="icon" data-a="edit" aria-label="Renomear" title="Renomear">${icon("edit")}</button>`
       : `<button class="btn sm" data-a="add">Adicionar</button>`}
       <button class="icon" data-a="del" aria-label="Remover" title="Remover">${icon("trash")}</button></div></div>`;
@@ -547,7 +677,8 @@ async function pageScreens() {
   if (!main.querySelector("#slist")) main.innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
   try { await loadScreens(); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
   const host = siteHost();
-  const mine = state.screens.filter(isAdded), waiting = state.screens.filter(s => !isAdded(s));
+  const recent = s => s.last_seen && Date.now() - new Date(s.last_seen).getTime() < 24 * 3600 * 1000;
+  const mine = state.screens.filter(isAdded), waiting = state.screens.filter(s => !isAdded(s) && recent(s));
   const on = mine.filter(isOnline).length;
   main.innerHTML = `
     <div class="head"><div><h1>Telas</h1><div class="sub">${mine.length} tela(s) · ${on} ligada(s) agora</div></div>
@@ -568,6 +699,12 @@ async function pageScreens() {
     const s = state.screens.find(x => x.id === b.closest("[data-id]").dataset.id);
     if (b.dataset.a === "edit") screenForm(s);
     else if (b.dataset.a === "add") addScreenForm(codeOf(s));
+    else if (b.dataset.a === "identify" || b.dataset.a === "reload") {
+      sb.from("screens").update({ command: b.dataset.a }).eq("id", s.id).then(({ error }) => {
+        if (error) toast(friendly(error), 4000);
+        else toast(b.dataset.a === "reload" ? `"${s.name}" vai recarregar em até 1 minuto.` : `O nome aparece na TV "${s.name}" em até 1 minuto.`, 4000);
+      });
+    }
     else confirmBox(`Remover "${isAdded(s) ? s.name : "tela " + codeOf(s)}"?`, "Se esse aparelho ainda estiver com o player aberto, ele volta a aparecer em 'Aguardando cadastro'. O histórico de exibições dele é apagado.", "Remover", async () => {
       const { error } = await sb.from("screens").delete().eq("id", s.id); if (error) throw error;
       toast("Tela removida"); pageScreens();
