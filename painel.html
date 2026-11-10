@@ -427,8 +427,8 @@ function videoDuration(file) {
 
 function mediaForm(m) {
   const edit = !!m;
-  const scr = state.screens;
   const sel = new Set(m?.screen_ids || []);
+  const scr = state.screens.filter(x => isAdded(x) || sel.has(x.id));
   modal(`<h2>${edit ? "Editar anúncio" : "Novo anúncio"}</h2>
     <form id="f-media">
       <div class="field"><label>Arquivo</label>
@@ -521,39 +521,109 @@ function mediaForm(m) {
 // ---------------------------------------------------------------------------
 // Telas
 // ---------------------------------------------------------------------------
+const NEW_NAME = "Nova tela";
+const codeOf = s => s.id.slice(-6).toUpperCase();
+const isAdded = s => s.name && s.name !== NEW_NAME;
+function siteHost() {
+  const site = location.origin + location.pathname.replace(/painel(\.html)?\/?$/, "");
+  return site.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function screenRow(s) {
+  const live = isOnline(s), inf = s.info || {}, added = isAdded(s);
+  const dev = [inf.model, inf.android ? "Android " + inf.android : "", inf.ip ? String(inf.ip).split(" ")[0] : ""].filter(Boolean).join(" · ");
+  return `<div class="card row" data-id="${esc(s.id)}">
+    <div class="info"><div class="t1">${added ? esc(s.name) : `Código <span style="letter-spacing:.06em">${esc(codeOf(s))}</span>`}${added && s.location ? ` <span class="sub">· ${esc(s.location)}</span>` : ""}</div>
+      <div class="t2">${added ? "Código " + esc(codeOf(s)) : "Detectada, ainda sem nome"}${dev ? " · " + esc(dev) : ""}</div>
+      <div style="margin-top:6px"><span class="chip ${live ? "ok" : "err"}"><span class="dot"></span>${live ? "Ligada" : "Desligada"} · visto ${ago(s.last_seen)}</span></div></div>
+    <div class="acts">${added
+      ? `<button class="icon" data-a="edit" aria-label="Renomear" title="Renomear">${icon("edit")}</button>`
+      : `<button class="btn sm" data-a="add">Adicionar</button>`}
+      <button class="icon" data-a="del" aria-label="Remover" title="Remover">${icon("trash")}</button></div></div>`;
+}
+
 async function pageScreens() {
   const main = $("#main");
   if (!main.querySelector("#slist")) main.innerHTML = `<div class="empty"><span class="spin dark"></span></div>`;
   try { await loadScreens(); } catch (e) { main.innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return; }
-  const site = location.origin + location.pathname.replace(/painel(\.html)?\/?$/, "");
-  const host = site.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const on = state.screens.filter(isOnline).length;
+  const host = siteHost();
+  const mine = state.screens.filter(isAdded), waiting = state.screens.filter(s => !isAdded(s));
+  const on = mine.filter(isOnline).length;
   main.innerHTML = `
-    <div class="head"><div><h1>Telas</h1><div class="sub">${state.screens.length} tela(s) · ${on} ligada(s) agora</div></div></div>
-    <div class="card help"><div><b>Ligar uma TV nova</b>No TV Box com o app Start Play, abra o menu → <b>Endereço do player</b> e digite:
-      <div style="margin-top:6px"><code>${esc(host)}</code></div>
-      <div class="sub" style="margin-top:6px">Em até 1 minuto ela aparece nesta lista. Depois é só dar um nome.</div>
-      <div class="sub" style="margin-top:10px">Instalar ou atualizar o app na TV: no navegador do TV Box, abra <code>${esc(host)}/startplay.apk</code></div></div></div>
-    <div class="list" id="slist">${state.screens.length ? state.screens.map(s => {
-      const live = isOnline(s), inf = s.info || {};
-      const dev = [inf.model, inf.android ? "Android " + inf.android : "", inf.ip ? String(inf.ip).split(" ")[0] : ""].filter(Boolean).join(" · ");
-      return `<div class="card row" data-id="${esc(s.id)}">
-        <div class="info"><div class="t1">${esc(s.name)}${s.location ? ` <span class="sub">· ${esc(s.location)}</span>` : ""}</div>
-          <div class="t2">Código ${esc(s.id.slice(-6).toUpperCase())}${dev ? " · " + esc(dev) : ""}</div>
-          <div style="margin-top:6px"><span class="chip ${live ? "ok" : "err"}"><span class="dot"></span>${live ? "Ligada" : "Desligada"} · visto ${ago(s.last_seen)}</span></div></div>
-        <div class="acts"><button class="icon" data-a="edit" aria-label="Renomear" title="Renomear">${icon("edit")}</button>
-          <button class="icon" data-a="del" aria-label="Remover" title="Remover">${icon("trash")}</button></div></div>`;
-    }).join("") : `<div class="card empty"><h3>Nenhuma TV conectada ainda</h3><div>Siga o passo acima no TV Box.</div></div>`}</div>`;
+    <div class="head"><div><h1>Telas</h1><div class="sub">${mine.length} tela(s) · ${on} ligada(s) agora</div></div>
+      <div class="spacer"></div><button class="btn" id="add-screen">+ Adicionar tela</button></div>
+    <div id="slist">
+      ${mine.length ? `<div class="list">${mine.map(screenRow).join("")}</div>`
+        : `<div class="card empty"><h3>Nenhuma tela adicionada ainda</h3><div>Ligue o TV Box, abra o player e adicione a tela com o código que aparece nela.</div>
+            <button class="btn" id="add-screen2">+ Adicionar a primeira tela</button></div>`}
+      ${waiting.length ? `<h2 style="font-size:15px;margin:28px 0 4px">Aguardando cadastro</h2>
+        <div class="sub" style="margin-bottom:10px">Aparelhos que abriram o player mas ainda não foram adicionados. Se não for uma TV sua, apague.</div>
+        <div class="list">${waiting.map(screenRow).join("")}</div>` : ""}
+    </div>
+    <div class="sub" style="margin-top:24px">Instalar ou atualizar o app na TV: no navegador do TV Box, abra <code style="background:var(--acc-soft);color:var(--acc);padding:2px 6px;border-radius:6px">${esc(host)}/startplay.apk</code></div>`;
+  $("#add-screen").addEventListener("click", () => addScreenForm());
+  $("#add-screen2")?.addEventListener("click", () => addScreenForm());
   $("#slist").addEventListener("click", e => {
     const b = e.target.closest("[data-a]"); if (!b) return;
     const s = state.screens.find(x => x.id === b.closest("[data-id]").dataset.id);
     if (b.dataset.a === "edit") screenForm(s);
-    else confirmBox(`Remover "${s.name}"?`, "Se essa TV ainda estiver ligada, ela volta a aparecer como 'Nova tela'. O histórico de exibições dela é apagado.", "Remover", async () => {
+    else if (b.dataset.a === "add") addScreenForm(codeOf(s));
+    else confirmBox(`Remover "${isAdded(s) ? s.name : "tela " + codeOf(s)}"?`, "Se esse aparelho ainda estiver com o player aberto, ele volta a aparecer em 'Aguardando cadastro'. O histórico de exibições dele é apagado.", "Remover", async () => {
       const { error } = await sb.from("screens").delete().eq("id", s.id); if (error) throw error;
       toast("Tela removida"); pageScreens();
     });
   });
   state.poll = setInterval(() => { if (state.tab === "telas" && !$("#modal-root").innerHTML) pageScreens() }, 30000);
+}
+
+function addScreenForm(prefill) {
+  const host = siteHost();
+  modal(`<h2>Adicionar tela</h2>
+    <ol class="sub" style="margin:0 0 16px 18px;line-height:1.6">
+      <li>No TV Box, abra o app <b>Start Play</b> → menu → <b>Endereço do player</b> e digite <code style="background:var(--acc-soft);color:var(--acc);padding:1px 6px;border-radius:6px">${esc(host)}</code></li>
+      <li>A TV mostra <b>"Tela pronta"</b> com um <b>código de 6 letras</b>.</li>
+      <li>Digite o código aqui e dê um nome para a tela.</li>
+    </ol>
+    <form id="f-add">
+      <div class="field"><label for="code">Código da TV</label>
+        <input class="in" id="code" maxlength="8" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="KCYVSB"
+          style="font-size:20px;font-weight:700;letter-spacing:.18em;text-transform:uppercase" value="${esc(prefill || "")}"></div>
+      <div class="field"><label for="sn">Nome da tela</label><input class="in" id="sn" maxlength="80" required placeholder="Ex.: Recepção"></div>
+      <div class="field"><label for="sl">Local <span class="sub">(opcional)</span></label><input class="in" id="sl" maxlength="120" placeholder="Ex.: Loja Centro"></div>
+      <div id="f-err"></div>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit" id="add-ok">Adicionar</button></div>
+    </form>`);
+  if (prefill) $("#sn").focus();
+  const err = (t, ok) => { $("#f-err").innerHTML = t ? `<div class="err-box"${ok ? ' style="background:var(--acc-soft);color:var(--acc)"' : ""}>${t}</div>` : "" };
+  $("#f-add").addEventListener("submit", async e => {
+    e.preventDefault(); err("");
+    const code = $("#code").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const name = $("#sn").value.trim(), loc = $("#sl").value.trim() || null;
+    if (code.length !== 6) { err("O código tem 6 letras/números. Ele aparece na TV, na tela \"Tela pronta\"."); return; }
+    if (!name || name.toLowerCase() === NEW_NAME.toLowerCase()) { err("Dê um nome para a tela, por exemplo \"Recepção\"."); return; }
+    const btn = $("#add-ok"); btn.disabled = true;
+    // a TV fala com o servidor a cada minuto: procura por até ~1 minuto
+    for (let i = 0; i < 13; i++) {
+      btn.innerHTML = `<span class="spin"></span> ${i ? "Esperando a TV…" : "Procurando…"}`;
+      try {
+        await loadScreens();
+        const found = state.screens.filter(s => codeOf(s) === code);
+        if (found.length) {
+          const s = found.sort((a, b) => new Date(b.last_seen || 0) - new Date(a.last_seen || 0))[0];
+          const { error } = await sb.from("screens").update({ name, location: loc }).eq("id", s.id);
+          if (error) throw error;
+          closeModal(); toast(`Tela "${name}" adicionada! O nome aparece na TV em até 1 minuto.`, 4000); pageScreens();
+          return;
+        }
+      } catch (ex) { err(esc(friendly(ex))); btn.disabled = false; btn.textContent = "Adicionar"; return; }
+      if (!$("#f-add")) return; // janela fechada
+      if (i === 0) err(`Ainda não achei a tela <b>${esc(code)}</b>. Deixe a TV ligada mostrando "Tela pronta". Vou continuar procurando por 1 minuto…`, true);
+      await new Promise(r => setTimeout(r, 5000));
+      if (!$("#f-add")) return;
+    }
+    err(`Não achei a tela <b>${esc(code)}</b>. Confira o código na TV e se ela está com o endereço <b>${esc(host)}</b> e com internet.`);
+    btn.disabled = false; btn.textContent = "Tentar de novo";
+  });
 }
 
 function screenForm(s) {
