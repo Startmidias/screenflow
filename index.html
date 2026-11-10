@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>ScreenFlow · Player</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:calc(100vh / 36)}
+  html,body{height:100%;overflow:hidden;background:#000;color:#fff;cursor:none;
+    font-family:Roboto,"Noto Sans",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .layer{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;
+    -webkit-transition:opacity .6s ease;transition:opacity .6s ease;background:#000}
+  .layer.on{opacity:1}
+  .layer img,.layer video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+  #msg{position:absolute;left:0;top:0;width:100%;height:100%;background:#0E1014;display:none}
+  #msg.on{display:block}
+  .box{position:absolute;left:6rem;right:6rem;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%)}
+  .logo{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-weight:700;font-size:1.3rem;margin-bottom:2.4rem}
+  .logo svg{width:2.4rem;height:2.4rem;margin-right:.7rem}
+  .logo em{font-style:normal;color:#A39DF0;margin-left:.35rem}
+  h1{font-size:2.6rem;font-weight:700;line-height:1.15}
+  p{color:#A3AAB6;font-size:1.2rem;line-height:1.45;margin-top:.8rem;max-width:44rem}
+  .code{display:inline-block;margin-top:2rem;padding:.7rem 1.2rem;border-radius:.7rem;background:#161A21;border:1px solid #2A303B;font-size:1.05rem;color:#F0F1F4}
+  .code b{color:#A39DF0;letter-spacing:.08em}
+  #net{position:absolute;right:1.2rem;bottom:1rem;font-size:.75rem;color:#fff;background:rgba(0,0,0,.55);padding:.3rem .7rem;border-radius:1rem;display:none}
+  #net.on{display:block}
+</style>
+</head>
+<body>
+<div class="layer" id="L0"></div>
+<div class="layer" id="L1"></div>
+<div id="msg">
+  <div class="box">
+    <div class="logo"><svg viewBox="0 0 48 48"><rect x="3" y="7" width="42" height="28" rx="6" fill="#7F77DD"/><path d="M20 15v12l10-6z" fill="#0E1014"/><rect x="16" y="38" width="16" height="3" rx="1.5" fill="#7F77DD"/></svg>ScreenFlow<em>TV</em></div>
+    <h1 id="msg-t">Conectando…</h1>
+    <p id="msg-p"></p>
+    <div class="code" id="msg-c" style="display:none"></div>
+  </div>
+</div>
+<div id="net">sem internet · passando o que já foi baixado</div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  "use strict";
+  var CFG = window.SCREENFLOW || {};
+  var SYNC_MS = 60000;
+  var S = { id:null, name:"", items:[], idx:-1, layer:0, timer:null, cur:null, started:0, online:true, lastSync:0, muted:false };
+
+  function $(id){ return document.getElementById(id) }
+  function ls(k, v){ try { if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch(e){ return null } }
+
+  // identidade fixa desta TV
+  S.id = ls("sf_screen");
+  if(!S.id){
+    var c = "abcdefghjkmnpqrstuvwxyz23456789", r = "tv-";
+    for(var i = 0; i < 12; i++) r += c.charAt(Math.floor(Math.random() * c.length));
+    S.id = r; ls("sf_screen", r);
+  }
+  var shortCode = S.id.slice(-6).toUpperCase();
+
+  function msg(t, p, showCode){
+    $("msg-t").textContent = t; $("msg-p").textContent = p || "";
+    $("msg-c").style.display = showCode ? "inline-block" : "none";
+    $("msg-c").innerHTML = 'Esta tela: <b>' + esc(S.name || "Nova tela") + '</b> · código <b>' + shortCode + '</b>';
+    $("msg").className = "on";
+  }
+  function hideMsg(){ $("msg").className = "" }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c] }) }
+  function today(){ var d = new Date(); return d.getFullYear() + "-" + two(d.getMonth()+1) + "-" + two(d.getDate()) }
+  function two(n){ return (n < 10 ? "0" : "") + n }
+
+  function rpc(fn, body){
+    return fetch(CFG.supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/" + fn, {
+      method:"POST",
+      headers: (function(){
+        var h = { "apikey":CFG.supabaseKey, "Content-Type":"application/json" };
+        if(/^eyJ/.test(CFG.supabaseKey)) h.Authorization = "Bearer " + CFG.supabaseKey; // chave antiga (JWT)
+        return h;
+      })(),
+      body:JSON.stringify(body)
+    }).then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + " " + t) });
+      return r.status === 204 ? null : r.json();
+    });
+  }
+
+  function deviceInfo(){
+    var info = { ua:navigator.userAgent.slice(0, 200), w:screen.width, h:screen.height, dpr:window.devicePixelRatio || 1 };
+    try { if(window.TV && TV.info){ var t = JSON.parse(TV.info()); info.model = t.model; info.android = t.android; info.ip = t.ip } } catch(e){}
+    return info;
+  }
+
+  // ---------- sincronização ----------
+  function sync(first){
+    if(!CFG.supabaseUrl || CFG.supabaseUrl.indexOf("COLE_") === 0){
+      msg("Falta configurar o site", "Preencha o arquivo config.js com os dados do Supabase."); return;
+    }
+    rpc("sf_sync", { p_screen:S.id, p_today:today(), p_info: first ? deviceInfo() : {} })
+      .then(function(d){
+        S.online = true; $("net").className = "";
+        S.lastSync = Date.now();
+        S.name = (d && d.screen && d.screen.name) || "";
+        var items = (d && d.items) || [];
+        ls("sf_last", JSON.stringify({ name:S.name, items:items }));
+        apply(items);
+      })
+      ["catch"](function(e){
+        S.online = false;
+        if(window.console) console.log("sync falhou", e);
+        if(!S.items.length){
+          var last = null; try { last = JSON.parse(ls("sf_last") || "null") } catch(x){}
+          if(last && last.items && last.items.length){ S.name = last.name; apply(last.items) }
+          else msg("Sem conexão com o servidor", "Confira a internet desta TV. Vou tentar de novo em 1 minuto.", true);
+        }
+        if(S.items.length) $("net").className = "on";
+      });
+  }
+
+  function sameList(a, b){
+    if(a.length !== b.length) return false;
+    for(var i = 0; i < a.length; i++) if(a[i].id !== b[i].id || a[i].url !== b[i].url || a[i].duration !== b[i].duration) return false;
+    return true;
+  }
+  function apply(items){
+    if(S.applied && sameList(items, S.items)) return;
+    S.applied = true;
+    var wasEmpty = !S.items.length;
+    S.items = items;
+    if(!items.length){
+      stop();
+      msg("Tela pronta", "Nenhum anúncio no ar agora. Cadastre anúncios no painel e eles aparecem aqui em até 1 minuto.", true);
+      return;
+    }
+    if(wasEmpty || !S.cur) next();
+    // se a lista mudou, a troca acontece no fim do anúncio atual
+  }
+
+  // ---------- reprodução ----------
+  function stop(){
+    clearTimeout(S.timer); S.timer = null; S.cur = null;
+    for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; L.innerHTML = "" }
+  }
+
+  function finish(){
+    if(S.cur){
+      var secs = Math.round((Date.now() - S.started) / 1000);
+      var id = S.cur.id;
+      if(secs >= 2) rpc("sf_log", { p_screen:S.id, p_media:id, p_seconds:secs })["catch"](function(){});
+    }
+    next();
+  }
+
+  function next(){
+    clearTimeout(S.timer);
+    if(!S.items.length){ stop(); return }
+    S.idx = (S.idx + 1) % S.items.length;
+    var item = S.items[S.idx];
+    var L = $("L" + (1 - S.layer));
+    var old = $("L" + S.layer);
+    var fails = 0;
+
+    function show(el){
+      hideMsg();
+      if(el.parentNode !== L){ L.innerHTML = ""; L.appendChild(el) }
+      L.className = "layer on"; old.className = "layer";
+      S.layer = 1 - S.layer; S.cur = item; S.started = Date.now();
+      setTimeout(function(){ if(old.className === "layer") old.innerHTML = "" }, 900);
+      preloadNext();
+    }
+    function skip(){
+      S.cur = null;
+      if(++S.skips > S.items.length){ S.skips = 0; msg("Não consegui abrir os anúncios", S.online ? "Os arquivos não carregaram. Vou tentar de novo." : "Sem internet e nada salvo ainda nesta TV.", true); S.timer = setTimeout(next, 20000); return }
+      S.timer = setTimeout(next, 300);
+    }
+
+    if(item.kind === "video"){
+      var v = document.createElement("video");
+      v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+      v.preload = "auto"; v.muted = S.muted; v.src = item.url;
+      L.innerHTML = ""; L.appendChild(v);   // carrega na camada escondida e só aparece quando começa a tocar
+      var started = false;
+      v.addEventListener("playing", function(){ if(!started){ started = true; S.skips = 0; show(v); armVideoGuard(v) } });
+      v.addEventListener("ended", function(){ if(S.cur && S.cur.id === item.id) finish() });
+      v.addEventListener("error", function(){ if(!started) skip(); else finish() });
+      var p = v.play();
+      if(p && p["catch"]) p["catch"](function(){
+        // navegador comum bloqueia vídeo com som: tenta sem som
+        if(!v.muted){ v.muted = true; S.muted = true; var p2 = v.play(); if(p2 && p2["catch"]) p2["catch"](function(){ skip() }) } else skip();
+      });
+      S.timer = setTimeout(function(){ if(!started) skip() }, 25000);
+    } else {
+      var img = new Image();
+      img.onload = function(){ S.skips = 0; show(img); S.timer = setTimeout(finish, Math.max(3, item.duration || 10) * 1000) };
+      img.onerror = function(){ skip() };
+      img.src = item.url;
+    }
+  }
+  S.skips = 0;
+
+  function armVideoGuard(v){
+    clearTimeout(S.timer);
+    var max = (isFinite(v.duration) && v.duration > 0 ? v.duration + 5 : 600) * 1000;
+    S.timer = setTimeout(function(){ finish() }, Math.min(max, 600000));
+  }
+
+  function preloadNext(){
+    if(S.items.length < 2) return;
+    var n = S.items[(S.idx + 1) % S.items.length];
+    if(n.kind === "image"){ var i = new Image(); i.src = n.url }
+  }
+
+  // ---------- início ----------
+  msg("Conectando…", "", false);
+  try { var last = JSON.parse(ls("sf_last") || "null"); if(last && last.items){ S.name = last.name } } catch(e){}
+  sync(true);
+  setInterval(function(){ sync(false) }, SYNC_MS);
+  // recarrega a página uma vez por dia de madrugada (libera memória)
+  setInterval(function(){ var d = new Date(); if(d.getHours() === 4 && d.getMinutes() < 2 && performance.now() > 3600000) location.reload() }, 60000);
+  window.ScreenFlowPlayer = { state:S, sync:sync, next:next };
+})();
+</script>
+</body>
+</html>
