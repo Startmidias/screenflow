@@ -53,7 +53,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "2.1.0";
+  var VERSION = "2.2.0";
   var CFG = window.SCREENFLOW || {};
   var SYNC_MS = 60000;
   var IMG_TIMEOUT = 25000;
@@ -311,17 +311,50 @@
         im.onload = function(){ blobCache[item.url] = u; cb(null, im, "blob") };
         im.onerror = function(){
           URL.revokeObjectURL(u);
-          if(!window.createImageBitmap){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes)")); return }
+          if(!window.createImageBitmap){ viaJs(b, "sem createImageBitmap"); return }
           createImageBitmap(b).then(function(bmp){
             var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
             c.getContext("2d").drawImage(bmp, 0, 0); if(bmp.close) bmp.close();
             c.naturalWidth = c.width; c.naturalHeight = c.height;
             cb(null, c, "canvas");
-          })["catch"](function(e){ cb(new Error("não decodifica (" + ct + ", " + b.size + " bytes): " + (e && (e.name || e.message)))) });
+          })["catch"](function(e){ viaJs(b, e && (e.name || e.message)) });
         };
+        // Plano C: este TV Box não abre JPEG de jeito nenhum (nem <img>, nem
+        // createImageBitmap). O próprio player decodifica o arquivo e desenha
+        // num canvas; depois guarda uma cópia em PNG, que a TV abre normalmente.
+        function viaJs(blob, why){
+          jsDecode(blob).then(function(cv){
+            cv.naturalWidth = cv.width; cv.naturalHeight = cv.height;
+            cb(null, cv, "js");
+            if(cv.toBlob) cv.toBlob(function(png){
+              if(png && !blobCache[item.url]) blobCache[item.url] = URL.createObjectURL(png);
+            }, "image/png");
+          })["catch"](function(e){
+            cb(new Error("não decodifica (" + ct + ", " + blob.size + " bytes): " + why + "; " + (e && e.message)));
+          });
+        }
         im.src = u;
       })
       ["catch"](function(e){ cb(new Error("download falhou: " + (e && e.message))) });
+  }
+
+  var jpegLib = null;
+  function jsDecode(blob){
+    jpegLib = jpegLib || new Promise(function(res, rej){
+      var sc = document.createElement("script"); sc.src = "jpeg-decoder.js?v=" + VERSION; sc.onload = res;
+      sc.onerror = function(){ jpegLib = null; rej(new Error("decodificador indisponível")) };
+      document.head.appendChild(sc);
+    });
+    return jpegLib.then(function(){ return new Response(blob).arrayBuffer() }).then(function(buf){
+      var b = new Uint8Array(buf);
+      if(b[0] !== 0xFF || b[1] !== 0xD8) throw new Error("não é JPEG");
+      var im = window["jpeg-js"].decode(b, { useTArray:true, formatAsRGBA:true, maxResolutionInMP:16, maxMemoryUsageInMB:200 });
+      if(im.width * im.height > MAX_PIXELS) throw new Error("imagem grande demais (" + im.width + "x" + im.height + ")");
+      var cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
+      var g = cv.getContext("2d"), d = g.createImageData(im.width, im.height);
+      d.data.set(im.data); g.putImageData(d, 0, 0);
+      return cv;
+    });
   }
 
   function preloadNext(){
