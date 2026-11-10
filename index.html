@@ -775,6 +775,7 @@
       var b = new Uint8Array(buf);
       if(b[0] !== 0xFF || b[1] !== 0xD8) throw new Error("não é JPEG");
       var im = window["jpeg-js"].decode(b, { useTArray:true, formatAsRGBA:true, maxResolutionInMP:16, maxMemoryUsageInMB:200 });
+      if(im.width * im.height > MAX_PIXELS) throw new Error("imagem grande demais (" + im.width + "x" + im.height + ")");
       var cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
       var g = cv.getContext("2d"), d = g.createImageData(im.width, im.height);
       d.data.set(im.data); g.putImageData(d, 0, 0);
