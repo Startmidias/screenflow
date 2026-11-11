@@ -218,6 +218,11 @@ const LOAD = {
   exceptions: async () => { state.exceptions = await q("schedule_exceptions", "*", r => r.order("day")); },
   sources: async () => { state.sources = await q("news_sources", SRC_COLS, r => r.order("position")); },
   settings: async () => { state.settings = (await q("settings"))[0] || {}; },
+  // última miniatura de cada TV ("ver a tela agora")
+  shots: async () => {
+    const { data, error } = await sb.rpc("sf_shots_latest");
+    state.shots = error ? (state.shots || {}) : Object.fromEntries((data || []).map(x => [x.screen_id, x]));
+  },
   version: async () => {
     try { const t = await (await fetch("version.txt?t=" + Date.now(), { cache: "no-store" })).text(); state.latest = t.trim(); } catch (e) {}
   }
@@ -350,7 +355,7 @@ PAGES.inicio = async function pageInicio() {
   loading();
   let daily = [];
   try {
-    await need("screens", "media", "clients", "payments", "receipts", "exceptions", "sources", "version");
+    await need("screens", "media", "clients", "payments", "receipts", "exceptions", "sources", "version", "shots");
     const t = today();
     const { data, error } = await sb.rpc("sf_plays_daily", { p_from: startOf(addDays(t, -13)).toISOString(), p_to: startOf(addDays(t, 1)).toISOString() });
     if (error) throw error; daily = data || [];
@@ -398,9 +403,9 @@ PAGES.inicio = async function pageInicio() {
       <div>
         <div class="card pad"><div class="head" style="margin-bottom:8px"><b>TVs agora</b><div class="spacer"></div><a href="#telas" class="small">Ver telas</a></div>
           ${states.length ? `<div class="list">${states.map(({ s, st }) => { const pr = progInfo(s), vi = versionInfo(s), sx = s.status || {};
-            return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;align-items:center"><b class="t1" style="flex:1">${esc(screenLabel(s))}</b><span class="chip ${st.cls}"><span class="dot"></span>${st.txt}</span></div>
+            return `<div class="tvnow" data-id="${esc(s.id)}" style="padding:8px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start">${shotThumb(s, true)}<div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center"><b class="t1" style="flex:1">${esc(screenLabel(s))}</b><span class="chip ${st.cls}"><span class="dot"></span>${st.txt}</span></div>
               <div class="t2">Último contato ${ago(s.last_seen)}${sx.now && isOnline(s) ? ` · tocando <b>${esc(sx.now)}</b>` : ""}</div>
-              <div class="meta"><span class="chip ${pr.cls}">${esc(pr.txt)}</span><span class="chip ${vi.ok ? "ok" : "warn"}">${esc(vi.txt)}</span>${sx.queue ? `<span class="chip acc">${sx.queue} registro(s) para enviar</span>` : ""}</div></div>`; }).join("")}</div>`
+              <div class="meta"><span class="chip ${pr.cls}">${esc(pr.txt)}</span><span class="chip ${vi.ok ? "ok" : "warn"}">${esc(vi.txt)}</span>${sx.queue ? `<span class="chip acc">${sx.queue} registro(s) para enviar</span>` : ""}</div></div></div>`; }).join("")}</div>`
             : `<div class="empty">Nenhuma TV pareada ainda. <a href="#telas">Adicionar tela</a></div>`}
         </div>
         <div class="card pad" style="margin-top:16px"><b>Exibições por dia</b><div class="sub small">últimos 14 dias, todas as telas</div>
@@ -411,6 +416,7 @@ PAGES.inicio = async function pageInicio() {
         <div class="alerts">${al.length ? al.slice(0, 30).map(([c, h, d, href]) => `<a class="al" href="${href}" style="color:inherit;text-decoration:none"><span class="chip ${c}" style="margin-top:2px"><span class="dot"></span></span><div><b>${esc(h)}</b><div class="t2">${esc(d || "")}</div></div></a>`).join("")
           : `<div class="empty" style="padding:28px">Tudo certo por aqui.</div>`}</div></div>
     </div>`;
+  main.querySelectorAll(".tvnow [data-a=shot]").forEach(b => b.addEventListener("click", () => { const s = state.screens.find(x => x.id === b.closest(".tvnow").dataset.id); if (s) shotModal(s); }));
   state.poll = setInterval(() => { if (state.tab === "inicio" && !$("#modal-root").innerHTML) PAGES.inicio(); }, 60000);
 };
 
@@ -418,6 +424,56 @@ PAGES.inicio = async function pageInicio() {
 // TELAS
 // ---------------------------------------------------------------------------
 function siteHost() { return (location.origin + location.pathname.replace(/painel(\.html)?\/?$/, "")).replace(/^https?:\/\//, "").replace(/\/$/, ""); }
+
+// miniatura do que a TV está mostrando (clicável)
+function shotThumb(s, small) {
+  const sh = (state.shots || {})[s.id];
+  if (!sh) return `<button class="shot none ${small ? "sm" : ""}" data-a="shot" title="Ver a tela agora"><span>${isOnline(s) ? "Aguardando a 1ª imagem" : "Sem imagem"}</span></button>`;
+  const old = Date.now() - new Date(sh.at) > 15 * 60e3;
+  return `<button class="shot ${small ? "sm" : ""}" data-a="shot" title="Ver a tela agora · imagem de ${esc(fmtDT(sh.at))}"><img src="${esc(sh.img)}" alt="Tela ${esc(screenLabel(s))}"><span class="age ${old ? "old" : ""}">${old ? ago(sh.at) : "agora"}</span></button>`;
+}
+// janela "Tela agora": imagem grande, histórico e pedido de imagem nova
+async function shotModal(s) {
+  modal(`<h2>Tela agora · ${esc(screenLabel(s))}</h2><div id="shx"><div class="empty"><span class="spin dark"></span></div></div>
+    <div class="modal-foot"><a class="btn ghost" id="shdl" download>Baixar imagem</a><div class="spacer"></div>
+      ${isOnline(s) ? `<button class="btn ghost" id="shnew">${icon("reload")} Atualizar agora</button>` : ""}<button class="btn" data-close>Fechar</button></div>`, "mid");
+  let hist = [], pick = null;
+  const load = async () => {
+    hist = await q("screen_shots", "id,at,img,what,w,h", r => r.eq("screen_id", s.id).order("at", { ascending: false }).limit(12)).catch(() => []);
+    if (hist.length) { state.shots = state.shots || {}; state.shots[s.id] = Object.assign({ screen_id: s.id }, hist[0]); }
+  };
+  const draw = () => {
+    const box = $("#shx"); if (!box) return;
+    if (!hist.length) {
+      box.innerHTML = `<div class="empty" style="padding:28px">${isOnline(s) ? "A TV ainda não mandou nenhuma imagem. Clique em <b>Atualizar agora</b>: ela manda em até 1 minuto." : `A TV está sem sinal desde ${esc(fmtDT(s.last_seen))}. Quando voltar, ela manda uma imagem nova.`}</div>`;
+      $("#shdl").style.display = "none"; return;
+    }
+    const cur = pick || hist[0];
+    box.innerHTML = `<div class="shotbig ${cur.h > cur.w ? "v" : ""}"><img src="${esc(cur.img)}" alt=""></div>
+      <div class="sub" style="margin:8px 0 12px">Imagem de <b>${esc(fmtDT(cur.at))}</b> (${ago(cur.at)})${cur.what ? ` · passando: <b>${esc(cur.what)}</b>` : ""}${!isOnline(s) ? ` · <span class="warn-txt">TV sem sinal desde ${esc(fmtDT(s.last_seen))}</span>` : ""}</div>
+      ${hist.length > 1 ? `<div class="small" style="font-weight:700;margin-bottom:6px">Últimas imagens</div><div class="shotstrip">${hist.map(h => `<button data-id="${h.id}" class="${h.id === cur.id ? "on" : ""}"><img src="${esc(h.img)}" alt=""><span>${esc(fmtDT(h.at).slice(-5))}</span></button>`).join("")}</div>` : ""}
+      <div class="hint" style="margin-top:10px">A TV manda uma imagem a cada 5 minutos. Serve também como prova para o anunciante.</div>`;
+    $("#shx .shotstrip")?.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; pick = hist.find(h => String(h.id) === b.dataset.id); draw(); });
+    // baixar em JPG (abre em qualquer celular/computador)
+    const im = new Image();
+    im.onload = () => { const c = document.createElement("canvas"); c.width = im.width * 3; c.height = im.height * 3; const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(im, 0, 0, c.width, c.height);
+      const a = $("#shdl"); if (!a) return; a.style.display = ""; a.href = c.toDataURL("image/jpeg", 0.9); a.download = `START PLAY - ${screenLabel(s)} - ${fmtDT(cur.at).replace(/[/:]/g, "-")}.jpg`; };
+    im.src = cur.img;
+  };
+  await load(); draw();
+  $("#shnew")?.addEventListener("click", async () => {
+    const b = $("#shnew"), before = hist[0] ? hist[0].at : null;
+    b.disabled = true; b.innerHTML = `<span class="spin dark"></span> Pedindo à TV…`;
+    const { error } = await sb.from("screens").update({ command: "shot" }).eq("id", s.id);
+    if (error) { toast(friendly(error), 4000); b.disabled = false; b.innerHTML = `${icon("reload")} Atualizar agora`; return; }
+    for (let i = 0; i < 25 && $("#shx"); i++) {
+      await new Promise(r => setTimeout(r, 4000));
+      await load();
+      if (hist[0] && hist[0].at !== before) { pick = null; draw(); toast("Imagem nova da TV."); break; }
+    }
+    if ($("#shnew")) { b.disabled = false; b.innerHTML = `${icon("reload")} Atualizar agora`; }
+  });
+}
 
 function screenRow(s) {
   const st = screenState(s), sx = s.status || {}, added = isAdded(s), inf = s.info || {};
@@ -429,11 +485,12 @@ function screenRow(s) {
       <div class="meta"><span class="chip ${st.cls}"><span class="dot"></span>${st.txt}</span><span class="chip ${pr.cls}">${esc(pr.txt)}</span><span class="chip ${vi.ok ? "ok" : "warn"}">${esc(vi.txt)}</span>
         <span class="chip">${esc(ORIENT[s.orientation] || "Horizontal")}</span>
         <span class="chip">${h.on ? `expediente ${h.open}–${h.close} · ${daysText(h.days)}` : "liga 24 h"}</span>
-        ${(s.ticker || {}).enabled ? `<span class="chip acc">notícias</span>` : ""}${s.promo ? `<span class="chip acc">chamada comercial</span>` : ""}
+        ${(s.ticker || {}).enabled ? `<span class="chip acc">notícias</span>` : ""}${s.promo ? `<span class="chip acc">chamada comercial</span>` : ""}${(s.extras || {}).enabled ? `<span class="chip acc">clima · cotação · futebol</span>` : ""}
         ${sx.fmt && sx.fmt.jpeg === false ? `<span class="chip warn" title="O player converte as fotos sozinho">não abre JPEG</span>` : ""}</div>
       ${sx.lastErr && sx.lastErrAt && Date.now() - new Date(sx.lastErrAt) < 6 * 3600e3 ? `<div class="t2 warn-txt">Último erro ${ago(sx.lastErrAt)}: ${esc(sx.lastErr)}</div>` : ""}`;
   } else lines = `<div class="t2">Abriu o player ${ago(s.last_seen)}${dev ? " · " + esc(dev) : ""}. Se for uma TV sua, pareie com o código.</div>`;
   return `<div class="card row" data-id="${esc(s.id)}">
+    ${added ? shotThumb(s) : ""}
     <div class="info"><div class="t1">${esc(screenLabel(s))}</div><div class="t2">${added ? "Código " + esc(codeOf(s)) + (dev ? " · " + esc(dev) : "") : ""}</div>${lines}</div>
     <div class="acts">${added ? `<button class="btn ghost sm" data-a="edit">${icon("gear")} Configurar</button>
       <button class="icon" data-a="hist" title="Histórico e erros" aria-label="Histórico">${icon("clock")}</button>
@@ -446,7 +503,7 @@ function screenRow(s) {
 PAGES.telas = async function pageScreens(arg) {
   const main = $("#main");
   if (!main.querySelector("#slist")) loading();
-  try { await need("screens", "exceptions", "sources", "version", "media"); } catch (e) { pageError(e); return; }
+  try { await need("screens", "exceptions", "sources", "version", "media", "shots"); } catch (e) { pageError(e); return; }
   if (state.tab !== "telas") return;
   const mine = addedScreens();
   const waiting = state.screens.filter(s => !isAdded(s) && s.last_seen && Date.now() - new Date(s.last_seen) < 24 * 3600e3);
@@ -472,6 +529,7 @@ PAGES.telas = async function pageScreens(arg) {
     const s = state.screens.find(x => x.id === b.closest("[data-id]").dataset.id);
     const a = b.dataset.a;
     if (a === "edit") screenForm(s);
+    else if (a === "shot") shotModal(s);
     else if (a === "hist") historyModal(s);
     else if (a === "add") addScreenForm(codeOf(s));
     else if (a === "identify" || a === "reload") {
@@ -541,8 +599,10 @@ function addScreenForm(prefill) {
 }
 
 // editor da tela com prévia ao vivo
+const EXTRAS = [["clima", "Clima (agora e próximos dias)"], ["cotacao", "Cotação (dólar, euro…)"], ["futebol", "Futebol (jogos e classificação)"]];
 function screenForm(s) {
   const h = hoursOf(s), tk = s.ticker || { enabled: false, sources: ["uol"], speed: 3 };
+  const ex = Object.assign({ enabled: false, items: ["clima", "cotacao", "futebol"], every: 3, seconds: 10 }, s.extras || {});
   const sel = new Set(tk.sources || []);
   const defPromo = state.settings.promo_text || "Anuncie aqui com a START PLAY • WhatsApp (65) 99328-8233";
   const bySec = {};
@@ -579,6 +639,14 @@ function screenForm(s) {
         <label class="switch"><input type="checkbox" id="pon" ${s.promo ? "checked" : ""}><span class="sl"></span>Mostrar chamada comercial</label>
         <div class="field" style="margin:12px 0 0"><label for="ptx">Texto desta tela</label><input class="in" id="ptx" maxlength="140" value="${esc(s.promo_text || defPromo)}">
           <div class="hint">Com as notícias ligadas, as duas se revezam no mesmo rodapé (${state.settings.news_seconds || 40} s de notícias, ${state.settings.promo_seconds || 10} s de chamada). <a href="#" id="pdef">Usar o texto padrão</a></div></div></div>
+      <div class="box"><h3>Entre os anúncios · Clima, cotação e futebol</h3>
+        <label class="switch"><input type="checkbox" id="xon" ${ex.enabled ? "checked" : ""}><span class="sl"></span>Mostrar cartões entre os anúncios</label>
+        <div id="xbox" style="margin-top:12px">
+          <div class="checks" id="xit">${EXTRAS.map(([k, t]) => `<label class="check ${ex.items.includes(k) ? "on" : ""}"><input type="checkbox" value="${k}" ${ex.items.includes(k) ? "checked" : ""} style="display:none">${esc(t)}</label>`).join("")}</div>
+          <div class="grid2" style="margin-top:10px"><div class="field"><label for="xev">A cada quantos anúncios</label><input class="in" type="number" id="xev" min="1" max="20" value="${ex.every}"></div>
+            <div class="field"><label for="xsec">Segundos na tela</label><input class="in" type="number" id="xsec" min="6" max="30" value="${ex.seconds}"></div></div>
+          <div class="hint">Os cartões não contam como exibição de anúncio e só aparecem com dados atualizados. Cidade do clima, moedas e campeonatos ficam em <a href="#ajustes">Ajustes</a>.</div>
+        </div></div>
       <label class="check" style="margin-bottom:12px"><input type="checkbox" id="all">Aplicar o rodapé (notícias e chamada) a todas as telas</label>
       <div id="f-err"></div>
       <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="submit" id="sv">Salvar</button></div>
@@ -591,16 +659,20 @@ function screenForm(s) {
   const ori = () => $("#ori .on").dataset.v;
   const days = () => $$("#hd .on").map(b => Number(b.dataset.d));
   const srcs = () => $$("#tbox input:checked").map(i => i.value);
+  const extras = () => ({ enabled: $("#xon").checked, items: $$("#xit input:checked").map(i => i.value),
+    every: Math.max(1, Math.min(20, parseInt($("#xev").value, 10) || 3)), seconds: Math.max(6, Math.min(30, parseInt($("#xsec").value, 10) || 10)) });
   const sync = () => {
     $("#hbox").style.display = $("#hon").checked ? "" : "none";
     $("#tbox").style.display = $("#ton").checked ? "" : "none";
+    $("#xbox").style.display = $("#xon").checked ? "" : "none";
     $("#tspv").textContent = SPEED_TXT[$("#tsp").value - 1];
     const portrait = ori() !== "landscape", box = $("#tvbox"), fr = $("#pv");
     const W = portrait ? 720 : 1280, H = portrait ? 1280 : 720, scale = portrait ? 420 / H : Math.min(400, box.parentElement.clientWidth - 20) / W;
     fr.style.width = W + "px"; fr.style.height = H + "px"; fr.style.transform = `scale(${scale})`;
     box.style.width = Math.round(W * scale) + "px"; box.style.height = Math.round(H * scale) + "px";
     const ov = { orientation: ori(), hours: { on: $("#hon").checked, open: $("#ho").value, close: $("#hc").value, days: days() },
-      ticker: { enabled: $("#ton").checked, sources: srcs(), speed: Number($("#tsp").value) }, promo: $("#pon").checked, promo_text: $("#ptx").value.trim() || defPromo };
+      ticker: { enabled: $("#ton").checked, sources: srcs(), speed: Number($("#tsp").value) }, promo: $("#pon").checked, promo_text: $("#ptx").value.trim() || defPromo,
+      extras: extras() };
     const news = state.sources.filter(x => x.enabled && ov.ticker.sources.includes(x.id)).map(x => ({ id: x.id, name: x.name }));
     try { fr.contentWindow.postMessage({ type: "sp-preview", screen: ov, news }, location.origin); } catch (e) {}
   };
@@ -608,6 +680,7 @@ function screenForm(s) {
   $("#ori").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $$("#ori button").forEach(x => x.classList.toggle("on", x === b)); sync(); });
   $("#hd").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; b.classList.toggle("on"); sync(); });
   $("#tbox").addEventListener("change", e => { const l = e.target.closest("label"); if (l) l.classList.toggle("on", e.target.checked); sync(); });
+  $("#xit").addEventListener("change", e => { const l = e.target.closest("label"); if (l) l.classList.toggle("on", e.target.checked); sync(); });
   $("#f-scr").addEventListener("input", sync);
   $("#pdef").addEventListener("click", e => { e.preventDefault(); $("#ptx").value = defPromo; sync(); });
   $("#exc-s").addEventListener("click", () => exceptionsForm(s));
@@ -621,12 +694,14 @@ function screenForm(s) {
     if ($("#hon").checked && $("#ho").value === $("#hc").value) { err("Os horários de ligar e desligar precisam ser diferentes."); return; }
     if ($("#hon").checked && !days().length) { err("Escolha pelo menos um dia de expediente."); return; }
     if ($("#ton").checked && !srcs().length) { err("Escolha pelo menos um portal de notícias (ou desligue a faixa)."); return; }
+    if ($("#xon").checked && !extras().items.length) { err("Escolha clima, cotação ou futebol (ou desligue os cartões)."); return; }
     const pt = $("#ptx").value.trim();
     if ($("#pon").checked && pt.length < 3) { err("Escreva o texto da chamada comercial."); return; }
     const foot = { ticker: { enabled: $("#ton").checked, sources: srcs().length ? srcs() : (tk.sources || ["uol"]), speed: Number($("#tsp").value) },
       promo: $("#pon").checked, promo_text: !pt || pt === defPromo ? null : pt };
     const row = { name, location: $("#sl").value.trim() || null, orientation: ori(), hours_on: $("#hon").checked,
-      open_at: $("#ho").value || "08:00", close_at: $("#hc").value || "22:00", open_days: days().length ? days() : [0, 1, 2, 3, 4, 5, 6], ...foot };
+      open_at: $("#ho").value || "08:00", close_at: $("#hc").value || "22:00", open_days: days().length ? days() : [0, 1, 2, 3, 4, 5, 6], ...foot,
+      extras: extras() };
     $("#sv").disabled = true;
     try {
       const { error } = await sb.from("screens").update(row).eq("id", s.id); if (error) throw error;
@@ -651,7 +726,7 @@ async function historyModal(s) {
   ]).catch(e => { $("#hx").innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return [null, null]; });
   if (!ev) return;
   const sx = s.status || {}, inf = s.info || {};
-  const kind = { back: ["ok", "Voltou a se conectar"], boot: ["", "Player reiniciou"], version: ["acc", "Versão do player"], error: ["err", "Erro"], program: ["acc", "Programação aplicada"] };
+  const kind = { back: ["ok", "Voltou a se conectar"], boot: ["", "Player reiniciou"], version: ["acc", "Versão do player"], error: ["err", "Erro"], program: ["acc", "Programação aplicada"], alert: ["warn", "Aviso de TV fora do ar"] };
   $("#hx").innerHTML = `
     <div class="grid2">
       <div class="box"><h3>Agora</h3><div class="small">${esc(screenState(s).txt)} · último contato ${fmtDT(s.last_seen)}<br>${esc(progInfo(s).txt)}<br>${esc(versionInfo(s).txt)}<br>
@@ -894,13 +969,14 @@ PAGES.anuncios = async function pageMedia(arg) {
   };
   main.innerHTML = `
     <div class="head"><div><h1>Anúncios</h1><div class="sub">Uma pasta por TV, com a sequência que passa em cada uma.</div></div>
-      <div class="spacer"></div><a class="btn ghost" href="#anuncios/todos">Lista completa</a><button class="btn" id="new">+ Novo anúncio</button></div>
+      <div class="spacer"></div><a class="btn ghost" href="#anuncios/todos">Lista completa</a><button class="btn ghost" id="art">${icon("edit")} Criar arte</button><button class="btn" id="new">+ Novo anúncio</button></div>
     ${state.media.length ? `<div class="chips"><span class="chip ok"><span class="dot"></span>${counts["No ar"]} no ar</span>
       ${counts["Agendado"] ? `<span class="chip acc">${counts["Agendado"]} agendado(s)</span>` : ""}${counts["Vencido"] ? `<span class="chip err">${counts["Vencido"]} vencido(s)</span>` : ""}${counts["Pausado"] ? `<span class="chip">${counts["Pausado"]} pausado(s)</span>` : ""}</div>` : ""}
     ${banner}
     ${scr.length ? Object.keys(units).sort().map(u => `<div class="unit-h">${esc(u)}</div><div class="kpis" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">${units[u].map(folder).join("")}</div>`).join("")
       : `<div class="card empty"><h3>Nenhuma TV pareada ainda</h3><div>As pastas aparecem quando você parear as TVs na aba Telas.</div><a class="btn" href="#telas">Ir para Telas</a></div>`}`;
   $("#new").addEventListener("click", () => mediaForm());
+  $("#art").addEventListener("click", () => openArtes(null, null, r => mediaForm(null, { file: r.file, design: r.design, assets: r.assets, title: r.title, client: r.design.client_id })));
   bindOpt();
 };
 
@@ -941,6 +1017,17 @@ function videoDuration(file) {
   });
 }
 
+function openArtes(design, clientId, done) {
+  const clientDesign = id => {
+    const ms = state.media.filter(x => x.client_id === id && x.design).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    return ms[0] ? ms[0].design : null;
+  };
+  const d = Object.assign({}, design || {});
+  if (!design && clientId) { const prev = clientDesign(clientId); if (prev) ["pal", "cor1", "cor2", "cor3", "cor4", "corTxt", "whatsapp", "instagram", "endereco", "logo_url"].forEach(k => { if (prev[k] != null) d[k] = prev[k]; }); d.client_id = clientId; }
+  SPArtes.open({ design: Object.keys(d).length ? d : null, modal, closeModal, toast, clients: state.clients.filter(c => c.active !== false), clientDesign,
+    company: (state.settings || {}).company, onDone: done });
+}
+
 function mediaForm(m, preset) {
   const edit = !!m;
   const sel = new Set(m?.screen_ids || (preset && preset.screens) || []);
@@ -953,7 +1040,8 @@ function mediaForm(m, preset) {
         <input type="file" id="file" accept="image/*,video/*,application/pdf,.heic,.heif,.tif,.tiff,.mov,.mkv,.avi,.wmv,.flv,.mpg,.mpeg,.m4v,.3gp,.ts" class="hide">
         <div class="drop ${edit ? "has" : ""}" id="drop" tabindex="0" role="button">${edit
           ? `<div class="preview"><div class="thumb">${m.kind === "video" ? `<video src="${esc(m.url)}#t=1" muted preload="metadata"></video>` : `<img src="${esc(m.url)}" alt="">`}</div><div><strong>Arquivo atual</strong><div class="t2">Clique para trocar</div></div></div>`
-          : `<strong>Escolher foto, vídeo ou PDF</strong><div>Qualquer formato (JPG, PNG, HEIC do iPhone, PDF, MOV, MP4, AVI…) · o painel converte para o formato da TV · ideal 1920×1080 (horizontal) ou 1080×1920 (vertical)</div>`}</div></div>
+          : `<strong>Escolher foto, vídeo ou PDF</strong><div>Qualquer formato (JPG, PNG, HEIC do iPhone, PDF, MOV, MP4, AVI…) · o painel converte para o formato da TV · ideal 1920×1080 (horizontal) ou 1080×1920 (vertical)</div>`}</div>
+        <div class="hint" style="margin-top:6px">${edit && m.design ? `Arte feita no painel: <a href="#" id="mkart">editar a arte</a>.` : `Não tem a arte? <a href="#" id="mkart">Crie aqui com um modelo pronto</a> (foto, preço, logo e WhatsApp).`}</div></div>
       <div id="prep"></div>
       <div class="field"><label for="title">Título</label><input class="in" id="title" maxlength="120" required value="${esc(m?.title || "")}" placeholder="Ex.: Promoção de verão"></div>
       <div class="grid2">
@@ -984,6 +1072,7 @@ function mediaForm(m, preset) {
     <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="button" id="next">Revisar e publicar</button></div></div>
     <div id="step2" class="hide"></div>`, "wide");
   let file = null, vidDur = null, prevUrl = m?.url || null, prevVid = m?.kind === "video", note = "";
+  let design = preset && preset.design ? preset.design : null, designAssets = (preset && preset.assets) || {};
   const err = t => { $("#f-err").innerHTML = t ? `<div class="err-box">${esc(t)}</div>` : ""; };
   const days = () => $$("#ad .on").map(b => Number(b.dataset.d));
   const screensSel = () => $$("#sc input:checked").map(i => i.value);
@@ -1085,6 +1174,16 @@ function mediaForm(m, preset) {
     estimate();
   }
   if (m?.kind === "video") $("#dur").disabled = true;
+  // criador de artes: abre por cima e volta para este formulário com a arte pronta
+  $("#mkart")?.addEventListener("click", e => {
+    e.preventDefault();
+    const keep = { screens: screensSel(), title: $("#title").value.trim(), client: $("#cli").value };
+    openArtes(design || (m && m.design) || null, keep.client, r => mediaForm(m, { screens: keep.screens.length ? keep.screens : (preset && preset.screens), file: r.file, design: r.design, assets: r.assets,
+      title: keep.title || r.title, client: keep.client || r.design.client_id }));
+  });
+  if (preset && preset.client && $("#cli")) { $("#cli").value = preset.client; $("#cli").dispatchEvent(new Event("change")); }
+  if (preset && preset.title) $("#title").value = preset.title;
+  if (preset && preset.file) choose(preset.file);
   estimate();
 
   // passo 2: revisar antes de publicar
@@ -1135,6 +1234,17 @@ function mediaForm(m, preset) {
     btn.innerHTML = `<span class="spin"></span> ${file ? "Enviando " + fmtMB(file.size) + "…" : "Salvando…"}`;
     let newPath = null;
     try {
+      if (design && file) {
+        const dz = Object.assign({}, design);
+        for (const k of ["foto", "logo"]) {
+          const b = designAssets[k]; if (!b) continue;
+          const pth = `artes/${uuid()}.${b.type === "image/png" ? "png" : "webp"}`;
+          const up = await sb.storage.from(BUCKET).upload(pth, b, { cacheControl: "31536000", contentType: b.type, upsert: false });
+          if (up.error) throw up.error;
+          dz[k + "_url"] = sb.storage.from(BUCKET).getPublicUrl(pth).data.publicUrl;
+        }
+        row.design = dz;
+      } else if (file && !design) row.design = null;
       if (file) {
         const ext = EXT[file.type] || (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || file.type.split("/")[1]).toLowerCase();
         newPath = `${uuid()}.${ext}`;

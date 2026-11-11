@@ -1,7 +1,7 @@
 /* START PLAY — deixa o player abrir mesmo sem internet (usa a última versão baixada).
    Sempre tenta a rede primeiro; o cache só entra quando a rede falha ou demora. */
 var SHELL = "sp-shell-v1";
-var FILES = ["./", "index.html", "config.js", "agenda.js", "jpeg-decoder.js", "logo.png"];
+var FILES = ["./", "index.html", "config.js", "agenda.js", "cartoes.js", "jpeg-decoder.js", "logo.png"];
 
 self.addEventListener("install", function(e){
   e.waitUntil(caches.open(SHELL).then(function(c){ return c.addAll(FILES) })["catch"](function(){}).then(function(){ return self.skipWaiting() }));

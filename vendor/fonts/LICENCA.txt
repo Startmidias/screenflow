@@ -1,0 +1,3 @@
+Fontes usadas pelo criador de artes do painel START PLAY (só no painel; a TV recebe a imagem pronta).
+anton.woff2          Anton (Vernon Adams)          — SIL Open Font License 1.1 — via @fontsource/anton
+montserrat-*.woff2   Montserrat (Julieta Ulanovsky) — SIL Open Font License 1.1 — via @fontsource/montserrat

@@ -497,6 +497,20 @@ PAGES.financeiro = async function pageFinance() {
 // AJUSTES
 // ---------------------------------------------------------------------------
 const TZS = ["America/Cuiaba", "America/Campo_Grande", "America/Porto_Velho", "America/Manaus", "America/Boa_Vista", "America/Rio_Branco", "America/Sao_Paulo", "America/Bahia", "America/Belem", "America/Fortaleza", "America/Recife", "America/Maceio", "America/Araguaina", "America/Santarem", "America/Noronha"];
+function alertHist(h) {
+  if (!h || !h.length) return `<div class="sub small">Nenhum aviso enviado ainda.</div>`;
+  return `<div class="tbl-wrap"><table><tbody>${h.map(x => `<tr><td class="small" style="white-space:nowrap">${esc(fmtDT(x.at))}</td>
+    <td class="small"><b>${esc(KIND_TXT[x.kind] || x.kind)}</b>${x.screen_name ? " · " + esc(x.screen_name) : ""}</td>
+    <td class="small">${x.channel === "whatsapp" ? "WhatsApp" : "E-mail"}</td>
+    <td class="small">${x.ok === true ? `<span class="chip ok">entregue</span>` : x.ok === false ? `<span class="chip err" title="${esc(x.error || "")}">falhou</span><div class="warn-txt">${esc((x.error || "").slice(0, 90))}</div>` : `<span class="chip">enviando</span>`}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function contentStatus(st) {
+  const keys = Object.keys(st || {}).sort();
+  if (!keys.length) return `<div class="sub small">Nada coletado ainda. Ligue os cartões em alguma tela (Telas → Configurar → Entre os anúncios); a coleta começa em até 1 minuto.</div>`;
+  return keys.map(k => { const x = st[k] || {}; return `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)"><b class="small" style="flex:1">${esc(CONTENT_TXT(k))}</b>
+    ${x.ok_at ? `<span class="chip ok">atualizado ${ago(x.ok_at)}</span>` : `<span class="chip">${x.waiting ? "buscando…" : "sem dados"}</span>`}${x.error ? `<span class="chip warn" title="${esc(x.error)}">${esc(x.error.slice(0, 40))}</span>` : ""}</div>`; }).join("");
+}
+
 async function validateSource(id) {
   const tk = await token();
   const r = await fetch(`${CFG.supabaseUrl.replace(/\/$/, "")}/functions/v1/noticias?validar=${encodeURIComponent(id)}`, { headers: { Authorization: "Bearer " + tk } });
@@ -504,9 +518,27 @@ async function validateSource(id) {
   if (!r.ok) throw new Error(j.erro || "HTTP " + r.status);
   return j.resultados || [];
 }
+// cidades para o clima (latitude, longitude)
+const CIDADES = [["Cuiabá", -15.601, -56.097], ["Várzea Grande", -15.646, -56.132], ["Rondonópolis", -16.470, -54.636], ["Sinop", -11.864, -55.509],
+  ["Tangará da Serra", -14.619, -57.486], ["Cáceres", -16.071, -57.682], ["Sorriso", -12.545, -55.711], ["Lucas do Rio Verde", -13.050, -55.911],
+  ["Primavera do Leste", -15.561, -54.296], ["Barra do Garças", -15.890, -52.257], ["Alta Floresta", -9.876, -56.086], ["Nova Mutum", -13.837, -56.083],
+  ["Campo Novo do Parecis", -13.675, -57.892], ["Pontes e Lacerda", -15.226, -59.335], ["Chapada dos Guimarães", -15.461, -55.750],
+  ["Campo Grande", -20.469, -54.620], ["Goiânia", -16.686, -49.264], ["Brasília", -15.794, -47.882], ["Porto Velho", -8.761, -63.900], ["São Paulo", -23.550, -46.633]];
+const MOEDAS_OP = [["USD", "Dólar"], ["EUR", "Euro"], ["GBP", "Libra"], ["ARS", "Peso argentino"], ["BTC", "Bitcoin"]];
+const LIGAS_OP = [["bra.1", "Brasileirão Série A"], ["bra.2", "Brasileirão Série B"], ["bra.copa_do_brazil", "Copa do Brasil"], ["conmebol.libertadores", "Libertadores"]];
+const KIND_TXT = { down: "TV sem sinal", reminder: "Lembrete", back: "TV voltou", test: "Teste" };
+const CONTENT_TXT = k => k === "clima" ? "Clima" : k === "cotacao" ? "Cotação" : k.startsWith("jogos:") ? "Jogos · " + ((LIGAS_OP.find(x => x[0] === k.slice(6)) || [])[1] || k.slice(6))
+  : k.startsWith("tabela:") ? "Classificação · " + ((LIGAS_OP.find(x => x[0] === k.slice(7)) || [])[1] || k.slice(7)) : k;
+
 PAGES.ajustes = async function pageSettings() {
   loading();
-  try { await need("settings", "sources", "version"); } catch (e) { pageError(e); return; }
+  let al = {}, hist = [], cst = {};
+  try {
+    await need("settings", "sources", "version");
+    al = (await q("alert_settings").catch(() => [{}]))[0] || {};
+    hist = await sb.rpc("sf_alert_history", { p_limit: 15 }).then(r => r.data || []).catch(() => []);
+    cst = await sb.rpc("sf_content_status", { p_refresh: false }).then(r => r.data || {}).catch(() => ({}));
+  } catch (e) { pageError(e); return; }
   if (state.tab !== "ajustes") return;
   const s = state.settings, main = $("#main");
   const bySec = {}; state.sources.forEach(x => { (bySec[x.section] = bySec[x.section] || []).push(x); });
@@ -529,6 +561,38 @@ PAGES.ajustes = async function pageSettings() {
         <div class="field"><label for="s10">Fuso horário</label><select class="in" id="s10">${TZS.map(z => `<option ${s.timezone === z ? "selected" : ""} value="${z}">${z.replace("America/", "").replace("_", " ")}</option>`).join("")}</select><div class="hint">Vale para expediente, agenda e relatórios.</div></div>
         <div class="field"><label for="s11">Ciclo máximo (segundos)</label><input class="in" id="s11" type="number" min="30" max="3600" value="${s.loop_max || 300}"><div class="hint">Tempo até um anúncio voltar a passar. Base do cálculo de ocupação.</div></div></div></div></div>
     </div><div id="f-err"></div><button class="btn" type="submit" id="sv">Salvar ajustes</button></form>
+    <h2 class="sec">Aviso de TV fora do ar</h2>
+    <form id="f-al" class="grid2c">
+      <div class="box"><h3>WhatsApp</h3>
+        <label class="switch"><input type="checkbox" id="aw" ${al.wa_on ? "checked" : ""}><span class="sl"></span>Avisar no WhatsApp</label>
+        <div class="grid2" style="margin-top:12px"><div class="field"><label for="awp">Número (com DDI e DDD)</label><input class="in" id="awp" placeholder="+5565999999999" value="${esc(al.wa_phone || "")}"></div>
+          <div class="field"><label for="awk">Chave do CallMeBot</label><input class="in" id="awk" autocomplete="off" value="${esc(al.wa_key || "")}"></div></div>
+        <div class="hint">Para ganhar a chave (grátis, 1 minuto): no celular desse número, abra <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a>, salve o número do robô que aparece lá e mande pelo WhatsApp a frase <b>I allow callmebot to send me messages</b>. A chave chega em seguida: cole aqui.</div></div>
+      <div class="box"><h3>E-mail</h3>
+        <label class="switch"><input type="checkbox" id="am" ${al.mail_on ? "checked" : ""}><span class="sl"></span>Avisar por e-mail</label>
+        <div class="grid2" style="margin-top:12px"><div class="field"><label for="amt">E-mail</label><input class="in" id="amt" type="email" value="${esc(al.mail_to || "")}"></div>
+          <div class="field"><label for="amk">Chave do Resend</label><input class="in" id="amk" autocomplete="off" placeholder="re_…" value="${esc(al.mail_key || "")}"></div></div>
+        <div class="hint">Crie uma conta grátis em <a href="https://resend.com/api-keys" target="_blank" rel="noopener">resend.com</a>, gere uma chave em <b>API Keys</b> e cole aqui. Sem domínio próprio, o Resend envia só para o e-mail da conta.</div></div>
+      <div class="box"><h3>Quando avisar</h3>
+        <div class="field"><label for="aa">Avisar depois de quantos minutos sem sinal</label><input class="in" id="aa" type="number" min="3" max="240" value="${al.after_min || 10}"></div>
+        <label class="switch"><input type="checkbox" id="ab" ${al.notify_back !== false ? "checked" : ""}><span class="sl"></span>Avisar também quando a TV voltar</label>
+        <div class="hint">Só avisa no horário de funcionamento de cada tela (Telas → Configurar → Expediente) e respeita feriados. Se a TV continuar fora no dia seguinte, manda um lembrete na abertura.</div>
+        <div id="al-err"></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" type="submit" id="asv">Salvar avisos</button><button class="btn ghost" type="button" id="atest">Enviar teste</button></div></div>
+      <div class="box"><h3>Últimos avisos</h3><div id="al-hist">${alertHist(hist)}</div></div>
+    </form>
+    <h2 class="sec">Conteúdo entre os anúncios</h2>
+    <form id="f-ct" class="grid2c">
+      <div class="box"><h3>O que mostrar</h3>
+        <div class="field"><label for="cc">Cidade do clima</label><select class="in" id="cc">${CIDADES.map(([n]) => `<option ${((s.content || {}).city || "Cuiabá") === n ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+        <div class="field"><span class="lbl">Moedas</span><div class="checks" id="cm">${MOEDAS_OP.map(([k, t]) => { const on = ((s.content || {}).coins || ["USD", "EUR"]).includes(k); return `<label class="check ${on ? "on" : ""}"><input type="checkbox" value="${k}" ${on ? "checked" : ""} style="display:none">${t}</label>`; }).join("")}</div></div>
+        <div class="field"><span class="lbl">Campeonatos</span><div class="checks" id="cl">${LIGAS_OP.map(([k, t]) => { const on = ((s.content || {}).leagues || ["bra.1", "bra.2"]).includes(k); return `<label class="check ${on ? "on" : ""}"><input type="checkbox" value="${k}" ${on ? "checked" : ""} style="display:none">${t}</label>`; }).join("")}</div></div>
+        <div class="hint">Para ligar numa TV: Telas → Configurar → Entre os anúncios. A coleta é feita pelo servidor da START PLAY e dividida entre todas as TVs.</div>
+        <div id="ct-err"></div><button class="btn" type="submit" id="csv" style="margin-top:8px">Salvar</button></div>
+      <div class="box"><h3>Situação das fontes</h3><div id="ct-st">${contentStatus(cst)}</div>
+        <button class="btn ghost sm" type="button" id="crf" style="margin-top:10px">${icon("reload")} Atualizar agora</button>
+        <div class="hint">Clima: MET Norway (licença CC BY 4.0) · cotação: AwesomeAPI · futebol: placar público da ESPN. Se uma fonte falhar, o cartão dela some sozinho até voltar.</div></div>
+    </form>
     <h2 class="sec">Fontes de notícias <span class="sub">(lista fixa; só entra na TV o que passou na validação)</span></h2>
     <div class="filters"><button class="btn ghost sm" id="vall">Validar todas agora</button><span class="sub small">Cada portal é consultado pelo servidor da START PLAY a cada 10 minutos e o resultado é dividido entre todas as TVs.</span></div>
     <div class="card tbl-wrap"><table><thead><tr><th>Editoria</th><th>Portal</th><th>Validação</th><th>Última coleta</th><th>Na TV</th><th></th></tr></thead><tbody>
@@ -565,6 +629,78 @@ PAGES.ajustes = async function pageSettings() {
     btn.disabled = false; btn.innerHTML = old; PAGES.ajustes();
   };
   $$("[data-val]").forEach(b => b.addEventListener("click", () => runVal(b.dataset.val, b)));
+
+  // avisos de TV fora do ar
+  const alRow = () => {
+    const ph = $("#awp").value.replace(/[^\d+]/g, ""), phone = ph ? (ph.startsWith("+") ? ph : "+55" + ph.replace(/^0+/, "")) : null;
+    return { wa_on: $("#aw").checked, wa_phone: phone, wa_key: $("#awk").value.trim() || null, mail_on: $("#am").checked,
+      mail_to: $("#amt").value.trim() || null, mail_key: $("#amk").value.trim() || null,
+      after_min: Math.max(3, Math.min(240, parseInt($("#aa").value, 10) || 10)), notify_back: $("#ab").checked, updated_at: new Date().toISOString() };
+  };
+  const alErr = t => { $("#al-err").innerHTML = t ? `<div class="err-box" style="margin-top:10px">${esc(t)}</div>` : ""; };
+  const saveAl = async () => {
+    const r = alRow();
+    if (r.wa_on && (!r.wa_phone || !/^\+\d{10,15}$/.test(r.wa_phone))) throw new Error("Confira o número do WhatsApp (ex.: +5565999999999).");
+    if (r.wa_on && !r.wa_key) throw new Error("Cole a chave do CallMeBot (veja como pegar logo abaixo).");
+    if (r.mail_on && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.mail_to || "")) throw new Error("Confira o e-mail.");
+    if (r.mail_on && !r.mail_key) throw new Error("Cole a chave do Resend.");
+    const { error } = await sb.from("alert_settings").upsert(Object.assign({ id: 1 }, r)); if (error) throw error;
+  };
+  $("#f-al").addEventListener("submit", async e => {
+    e.preventDefault(); alErr("");
+    $("#asv").disabled = true;
+    try { await saveAl(); toast("Avisos salvos."); } catch (ex) { alErr(friendly(ex)); }
+    $("#asv").disabled = false;
+  });
+  $("#atest").addEventListener("click", async () => {
+    alErr("");
+    const b = $("#atest"); b.disabled = true; b.innerHTML = `<span class="spin dark"></span> Enviando…`;
+    try {
+      await saveAl();
+      if (!$("#aw").checked && !$("#am").checked) throw new Error("Ligue o WhatsApp ou o e-mail antes de testar.");
+      const { data, error } = await sb.rpc("sf_alert_test"); if (error) throw error;
+      if (!data || !data.length) throw new Error("Nenhum canal configurado.");
+      for (let i = 0; i < 6; i++) {
+        await new Promise(r => setTimeout(r, 2500));
+        const h = await sb.rpc("sf_alert_history", { p_limit: 15 }).then(r => r.data || []);
+        if ($("#al-hist")) $("#al-hist").innerHTML = alertHist(h);
+        const tests = h.filter(x => x.kind === "test").slice(0, data.length);
+        if (tests.length && tests.every(x => x.ok !== null)) {
+          const bad = tests.filter(x => !x.ok);
+          if (bad.length) alErr(bad.map(x => `${x.channel === "whatsapp" ? "WhatsApp" : "E-mail"}: ${x.error || "falhou"}`).join(" · "));
+          else toast("Teste enviado. Confira o WhatsApp/e-mail.", 5000);
+          break;
+        }
+      }
+    } catch (ex) { alErr(friendly(ex)); }
+    b.disabled = false; b.textContent = "Enviar teste";
+  });
+
+  // conteúdo entre os anúncios
+  ["#cm", "#cl"].forEach(id => $(id).addEventListener("change", e => { const l = e.target.closest("label"); if (l) l.classList.toggle("on", e.target.checked); }));
+  $("#f-ct").addEventListener("submit", async e => {
+    e.preventDefault();
+    const c = CIDADES.find(x => x[0] === $("#cc").value) || CIDADES[0];
+    const content = { city: c[0], lat: c[1], lon: c[2], coins: $$("#cm input:checked").map(i => i.value), leagues: $$("#cl input:checked").map(i => i.value) };
+    if (!content.coins.length) content.coins = ["USD"];
+    $("#csv").disabled = true;
+    const { error } = await sb.from("settings").update({ content }).eq("id", 1);
+    $("#csv").disabled = false;
+    if (error) { $("#ct-err").innerHTML = `<div class="err-box">${esc(friendly(error))}</div>`; return; }
+    await need("settings"); toast("Salvo. As TVs recebem os dados novos em poucos minutos.");
+    sb.rpc("sf_content_status", { p_refresh: true });
+  });
+  $("#crf").addEventListener("click", async () => {
+    const b = $("#crf"); b.disabled = true; b.innerHTML = `<span class="spin dark"></span> Buscando…`;
+    try {
+      const r = await sb.rpc("sf_content_status", { p_refresh: true }); if (r.error) throw r.error;
+      await new Promise(x => setTimeout(x, 3500));
+      const r2 = await sb.rpc("sf_content_status", { p_refresh: false });
+      if ($("#ct-st")) $("#ct-st").innerHTML = contentStatus(r2.data || {});
+      toast("Pedido enviado. Os dados chegam em até 1 minuto.", 4000);
+    } catch (ex) { toast(friendly(ex), 5000); }
+    b.disabled = false; b.innerHTML = `${icon("reload")} Atualizar agora`;
+  });
   $("#vall").addEventListener("click", () => runVal("todas", $("#vall")));
 };
 

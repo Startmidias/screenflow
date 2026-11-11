@@ -111,10 +111,11 @@
 
 <script src="config.js"></script>
 <script src="agenda.js"></script>
+<script src="cartoes.js"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.1.0";
+  var VERSION = "3.2.0";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -128,7 +129,8 @@
   var SPEEDS = [2.0, 2.7, 3.4, 4.3, 5.4];   // velocidade da faixa, em "rem" por segundo
   var S = { id:null, name:"", cfg:null, items:[], prog:null, key:null, pend:null, idx:-1, layer:0, timer:null, cur:null, started:0,
             online:true, offlineSince:null, muted:false, skips:0, ok:0, err:0, lastErr:"", lastErrAt:null, boot:Date.now(),
-            token:0, skew:0, sleeping:false, override:null, ovNews:null, cfgKey:"", failAt:{} };
+            token:0, skew:0, sleeping:false, override:null, ovNews:null, cfgKey:"", failAt:{},
+            sinceCard:0, cardIdx:0, card:null, cards:0, shotAt:0 };
   var T = { items:[], at:0, ids:"", timer:null, k:0, plan:null, seg:null, segTimer:null, els:[], nextAt:0, pump:null,
             paused:false, pauseAt:0, err:null };
   var G = { W:0, H:0, RW:0, RH:0, rem:30, bh:0, rot:0 };
@@ -277,7 +279,8 @@
     var st = { v:VERSION, boots:boots, up:Math.round((Date.now() - S.boot) / 1000), n:S.items.length,
                now:S.cur ? S.cur.title : null, ok:S.ok, err:S.err, online:S.online,
                vw:window.innerWidth, vh:window.innerHeight, rot:G.rot, sleep:S.sleeping, power:power(),
-               prog:S.prog, band:T.plan || null, news:T.items.length, queue:qLoad().length, cache:M.on, fmt:FMT };
+               prog:S.prog, band:T.plan || null, news:T.items.length, queue:qLoad().length, cache:M.on, fmt:FMT,
+               card:S.card, cards:S.cards };
     if(S.pend) st.pending = { prog:S.pend.prog, total:S.pend.need.length, done:S.pend.done };
     if(T.err) st.newsErr = String(T.err).slice(0, 120);
     if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 240); st.lastErrAt = S.lastErrAt }
@@ -308,6 +311,7 @@
         if(d && d.command) command(d.command);
         var cfg = {}; for(var k in d) if(k !== "items" && k !== "command") cfg[k] = d[k];
         S.cfg = cfg;
+        if(!PREVIEW && cfg.content && Object.keys(cfg.content).length) ls("sp_content", JSON.stringify(cfg.content));
         S.name = (cfg.screen && cfg.screen.name) || "";
         onConfig();
         receive((d && d.items) || [], d && d.prog);
@@ -324,6 +328,7 @@
     var last = null; try { last = JSON.parse(ls("sf_last") || "null") } catch(x){}
     if(!last || !last.cfg) return null;
     S.cfg = last.cfg; S.skew = last.skew || 0; S.name = (last.cfg.screen || {}).name || "";
+    try { var cc = JSON.parse(ls("sp_content") || "null"); if(cc) S.cfg.content = cc } catch(x){}
     onConfig();
     commit({ items:last.items || [], prog:last.prog || null, key:last.key || null, need:[], done:0 }, true);
     if(S.items.length) $("net").className = "on";
@@ -341,6 +346,7 @@
 
   function command(c){
     if(PREVIEW) return;
+    if(c === "shot"){ S.shotAt = 0; setTimeout(sendShot, 400); return }
     if(c === "reload"){ interrupt("recarregada pelo painel"); setTimeout(function(){ location.reload() }, 300) }
     else if(c === "identify"){
       $("ident-n").textContent = S.name || "Nova tela"; $("ident-c").textContent = CODE;
@@ -630,15 +636,155 @@
       var secs = (Date.now() - S.started) / 1000;
       if(how === "stalled") record(S.cur, "interrupted", secs, "vídeo travou");
       else if(secs >= 2){ S.ok++; record(S.cur, "ok", secs) }
-      S.cur = null;
+      S.cur = null; S.sinceCard++;
     }
     next();
+  }
+
+  // ---------- cartões entre os anúncios (clima, cotação, futebol) ----------
+  function extrasCfg(){ var x = scr().extras || {}; return x.enabled ? x : null }
+  function cardList(){
+    var x = extrasCfg(); if(!x || !window.SPCards) return [];
+    return SPCards.available((S.cfg && S.cfg.content) || {}, x.items || [], Date.now() + S.skew);
+  }
+  function cardDue(){
+    var x = extrasCfg(); if(!x) return false;
+    return S.sinceCard >= Math.max(1, +x.every || 3) && cardList().length > 0;
+  }
+  function playCard(){
+    var list = cardList(), spec = list[S.cardIdx % list.length];
+    S.cardIdx++;
+    var token = ++S.token, L = $("L" + (1 - S.layer)), old = $("L" + S.layer);
+    clearLayer(L);
+    var c = document.createElement("canvas");
+    var w = G.RW || window.innerWidth, h = Math.max(1, (G.RH || window.innerHeight) - G.bh), k = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.round(w * k); c.height = Math.round(h * k); c.className = "fill card";
+    try {
+      SPCards.draw(c, spec, S.cfg.content, { tz:sets().tz, city:sets().city || "Cuiabá", company:sets().company });
+    } catch(e){ log("cartão falhou " + (e && e.message)); S.sinceCard = 0; next(); return }
+    L.appendChild(c);
+    hideMsg();
+    L.className = "layer on"; old.className = "layer";
+    S.layer = 1 - S.layer; S.cur = null; S.card = SPCards.title(spec, S.cfg.content); S.cards++;
+    setTimeout(function(){ if(old.className === "layer") clearLayer(old) }, 900);
+    var secs = Math.max(6, Math.min(30, +(extrasCfg() || {}).seconds || 10));
+    S.timer = setTimeout(function(){ if(token !== S.token) return; S.card = null; S.sinceCard = 0; next() }, secs * 1000);
+  }
+
+  // ---------- "ver a tela agora": miniatura do que está na tela ----------
+  function sendShot(){
+    if(PREVIEW || !S.online || !S.id || !S.cfg || scr().added === false) return;
+    if(Date.now() - S.shotAt < 40000) return;
+    S.shotAt = Date.now();
+    var cur = S.cur, r = buildShot(null);
+    if(r === "need" && cur){
+      // anúncio ainda vindo direto da internet: usa a cópia do arquivo para poder desenhar
+      localBlob(cur.url).then(function(b){ return b || fetch(cur.url, { cache:"force-cache" }).then(function(x){ if(!x.ok) throw new Error("HTTP " + x.status); return x.blob() }) })
+        .then(function(b){
+          return new Promise(function(res, rej){ var u = URL.createObjectURL(b), im = new Image();
+            im.onload = function(){ res(im); setTimeout(function(){ URL.revokeObjectURL(u) }, 2000) };
+            im.onerror = function(){ URL.revokeObjectURL(u); rej(new Error("não abriu")) }; im.src = u });
+        })
+        .then(function(im){ postShot(buildShot(im)) }, function(){ postShot(buildShot("skip")) });
+      return;
+    }
+    postShot(r);
+  }
+  function postShot(r){
+    if(!r || r === "need") return;
+    rpc("sf_shot", { p_screen:S.id, p_img:r.url, p_w:r.w, p_h:r.h, p_what:String(r.what).slice(0, 150) })["catch"](function(e){ log("miniatura não enviada " + (e && e.message)) });
+  }
+  // alt: imagem para usar no lugar da que está na tela (ou "skip" para só escrever o título)
+  function buildShot(alt){
+    var what = "";
+    try {
+      var RW = G.RW || window.innerWidth, RH = G.RH || window.innerHeight, k = 384 / Math.max(RW, RH);
+      var W = Math.round(RW * k), H = Math.round(RH * k), sh = Math.round((RH - G.bh) * k);
+      var c = document.createElement("canvas"); c.width = W; c.height = H;
+      var g = c.getContext("2d");
+      g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+      var on = function(id){ return / on/.test(" " + $(id).className) };
+      var grd = function(x0, x1){ var gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, "#FC0491"); gr.addColorStop(1, "#1D02A9"); return gr };
+      var words = function(t, y, size, wt){ g.font = (wt || 700) + " " + size + "px Roboto, Arial, sans-serif"; g.fillStyle = "#fff"; g.textAlign = "center";
+        var m = g.measureText(t).width; if(m > W * 0.9){ size *= W * 0.9 / m; g.font = (wt || 700) + " " + size + "px Roboto, Arial, sans-serif" } g.fillText(t, W / 2, y) };
+      if(S.sleeping){
+        what = "Fora do expediente (tela em espera)";
+        g.fillStyle = "#555"; g.font = "600 13px Roboto, Arial, sans-serif"; g.textAlign = "center"; g.fillText("Fora do expediente", W / 2, H / 2);
+      } else if(on("msg")){
+        what = $("msg-t").textContent;
+        g.fillStyle = grd(0, W); g.fillRect(0, 0, W, sh); words(what, sh / 2, 18);
+      } else if(on("house")){
+        what = "Anuncie aqui (sem anúncio no ar)";
+        g.fillStyle = grd(0, W); g.fillRect(0, 0, W, sh); words("ANUNCIE AQUI", sh / 2, 24, 800); words($("house-tel").textContent, sh / 2 + 24, 12, 700);
+      } else {
+        what = S.card || (S.cur && S.cur.title) || "";
+        var L = $("L" + S.layer), kids = L.children;
+        for(var i = 0; i < kids.length; i++){
+          var el = kids[i];
+          if(alt && alt !== "skip" && !/\bbdc\b/.test(el.className) && el.tagName === "IMG"){ var a2 = alt; a2.className = el.className; el = a2 }
+          var ok = drawInto(g, el, 0, 0, W, sh);
+          if(!ok && !/\bbdc\b/.test(el.className)){
+            if(!alt) return "need";
+            g.fillStyle = "#1a1030"; g.fillRect(0, 0, W, sh); words(what || "Anúncio", sh / 2, 16);
+          }
+        }
+      }
+      if(on("band") && !S.sleeping) drawBand(g, sh, W, H - sh, k, grd);
+      var url = c.toDataURL("image/webp", 0.62);
+      if(url.indexOf("data:image/webp") !== 0) url = c.toDataURL("image/png");
+      return { url:url, w:W, h:H, what:what };
+    } catch(e){ log("miniatura falhou " + (e && e.message)); return null }
+  }
+  // copia uma imagem/vídeo/canvas do anúncio para a miniatura (mesmo enquadramento da tela)
+  function drawInto(g, el, x, y, w, h){
+    var nw = el.naturalWidth || el.videoWidth || el.width, nh = el.naturalHeight || el.videoHeight || el.height;
+    if(!nw || !nh) return true;
+    try {
+      var t = document.createElement("canvas"); t.width = t.height = 1;
+      var tg = t.getContext("2d"); tg.drawImage(el, 0, 0, 1, 1); tg.getImageData(0, 0, 1, 1);   // imagem de outro site deixaria a miniatura bloqueada
+    } catch(e){ return false }
+    g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+    if(/\bbdc\b/.test(el.className)) g.drawImage(el, x, y, w, h);
+    else {
+      var cover = /\bfill\b/.test(el.className), s = cover ? Math.max(w / nw, h / nh) : Math.min(w / nw, h / nh);
+      var dw = nw * s, dh = nh * s;
+      g.drawImage(el, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+    g.restore();
+    return true;
+  }
+  function drawBand(g, y, W, bh, k, grd){
+    var band = $("band"), seg = band.getAttribute("data-seg");
+    g.fillStyle = "#07070C"; g.fillRect(0, y, W, bh);
+    g.textBaseline = "middle"; g.textAlign = "left";
+    var fs = Math.max(7, bh * 0.42);
+    if(seg === "promo"){
+      g.fillStyle = grd(0, W); g.fillRect(0, y, W, bh);
+      g.fillStyle = "#fff"; g.font = "800 " + fs + "px Roboto, Arial, sans-serif"; g.textAlign = "center";
+      g.fillText($("b-promo-t").textContent, W / 2, y + bh / 2, W * 0.92);
+    } else {
+      var lbl = $("b-lbl").textContent || "NOTÍCIAS";
+      g.font = "800 " + fs * 0.9 + "px Roboto, Arial, sans-serif";
+      var lw = g.measureText(lbl).width + bh * 0.8;
+      var vis = [], br = band.getBoundingClientRect(), its = document.querySelectorAll("#b-run .bi");
+      for(var i = 0; i < its.length; i++){ var r = its[i].getBoundingClientRect(); if(r.right > br.left && r.left < br.right) vis.push({ t:its[i].textContent, x:r.left - br.left }) }
+      g.font = "700 " + fs + "px Roboto, Arial, sans-serif"; g.fillStyle = "#fff";
+      var px = lw + 4;
+      vis.forEach(function(v){ var xx = G.rot ? px : Math.max(lw + 4, v.x * k); g.fillText(v.t, xx, y + bh / 2); px = xx + g.measureText(v.t).width + 12 });
+      g.fillStyle = grd(0, lw); g.fillRect(0, y, lw, bh);
+      g.fillStyle = "#fff"; g.font = "800 " + fs * 0.9 + "px Roboto, Arial, sans-serif"; g.fillText(lbl, bh * 0.4, y + bh / 2);
+    }
+    var clk = $("b-clock").textContent;
+    if(clk){ g.font = "700 " + fs + "px Roboto, Arial, sans-serif"; var cw = g.measureText(clk).width + bh * 0.6;
+      g.fillStyle = "#11111C"; g.fillRect(W - cw, y, cw, bh); g.fillStyle = "#fff"; g.textAlign = "center"; g.fillText(clk, W - cw / 2, y + bh / 2) }
+    g.textBaseline = "alphabetic"; g.textAlign = "left";
   }
 
   function next(){
     clearTimeout(S.timer);
     if(S.sleeping) return;
     if(!S.items.length || (S.cfg && scr().added === false && !PREVIEW)){ stop(); if(S.cfg) idle(); return }
+    if(cardDue()){ playCard(); return }
     // próximo anúncio que pode passar agora (vigência, dia da semana e horário)
     var p = parts(), n = S.items.length, item = null;
     for(var k = 1; k <= n; k++){ var j = (S.idx + k) % n; if(A.itemOn(S.items[j], p)){ S.idx = j; item = S.items[j]; break } }
@@ -840,12 +986,15 @@
   setInterval(flush, 60000);
   if(!PREVIEW){
     setInterval(checkVersion, 5 * 60000);
+    setTimeout(sendShot, 30000);
+    setInterval(sendShot, 5 * 60000);
     // recarrega a página uma vez por dia de madrugada (libera memória)
     setInterval(function(){ var p = parts(); if(p.min >= 240 && p.min < 242 && Date.now() - S.boot > 3600000 && !S.cur) location.reload() }, 60000);
   }
   window.addEventListener("online", function(){ sync(false) });
   window.StartPlay = window.ScreenFlowPlayer = { state:S, news:T, media:M, geo:function(){ return G }, sync:sync, next:next,
-    version:VERSION, refreshBand:refreshBand, checkHours:checkHours, parts:parts, queue:qLoad, flush:flush };
+    version:VERSION, refreshBand:refreshBand, checkHours:checkHours, parts:parts, queue:qLoad, flush:flush,
+    shot:function(){ S.shotAt = 0; sendShot() }, cards:cardList };
 })();
 </script>
 </body>
