@@ -244,7 +244,7 @@
       g.fillStyle = grad(g, cx - r, cy - r, cx + r, cy + r, PINK, BLUE); g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
       text(g, m[1], cx, cy + r * 0.32, r * (m[1].length > 2 ? 0.7 : 0.95), 800, "#fff", "center");
       var nx = cx + r + u * 1.0, dec = it.bid >= 1000 ? 0 : 2;
-      var up = (it.pct || 0) >= 0, pct = (up ? "▲ " : "▼ ") + money(Math.abs(it.pct || 0), 2) + "%";
+      var up = (it.pct || 0) >= 0, pct = it.pct == null ? "" : (up ? "▲ " : "▼ ") + money(Math.abs(it.pct || 0), 2) + "%";
       if (!vertical) {
         text(g, m[0], nx, cy - rowH * 0.04, Math.min(rowH * 0.3, u * 1.5), 800, "#fff", "left", x + w * 0.42 - nx);
         text(g, it.code + " → BRL", nx, cy + rowH * 0.26, Math.min(rowH * 0.17, u * 0.8), 500, MUTED);
@@ -258,8 +258,9 @@
       }
       y += rowH + u * 0.6;
     });
-    var at = items[0] && items[0].at ? String(items[0].at).slice(11, 16) : "";
-    footer(g, W, H, u, "Fonte: AwesomeAPI" + (at ? " · cotação das " + at : ""));
+    var at0 = items[0] && items[0].at ? String(items[0].at) : "";
+    if (d.src === "frankfurter") footer(g, W, H, u, "Fonte: Banco Central Europeu (Frankfurter)" + (at0 ? " · fechamento de " + at0.slice(8, 10) + "/" + at0.slice(5, 7) : ""));
+    else footer(g, W, H, u, "Fonte: AwesomeAPI" + (at0.length > 15 ? " · cotação das " + at0.slice(11, 16) : ""));
   }
 
   function hexColor(c) { return /^[0-9a-f]{6}$/i.test(c || "") && !/^(000000|ffffff)$/i.test(c) ? "#" + c : "rgba(255,255,255,.35)"; }
