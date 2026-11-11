@@ -12,7 +12,7 @@ self.addEventListener("fetch", function(e){
   var req = e.request, u = new URL(req.url);
   if(req.method !== "GET" || u.origin !== self.location.origin) return;       // Supabase e mídias: o player cuida
   var path = u.pathname;
-  if(/version\.txt$|\.apk$|painel|sw\.js$/.test(path)) return;                // sempre direto da rede
+  if(/version\.txt$|\.apk$|painel|conversor|vendor\/|sw\.js$/.test(path)) return;                // sempre direto da rede
   e.respondWith(networkFirst(req, u));
 });
 

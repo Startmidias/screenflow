@@ -1,0 +1,10 @@
+Bibliotecas usadas pelo conversor automático do painel START PLAY
+(carregadas só quando o arquivo enviado precisa delas)
+
+ffmpeg/            @ffmpeg/ffmpeg 0.12.15 — MIT — https://github.com/ffmpegwasm/ffmpeg.wasm
+                   O núcleo (ffmpeg-core 0.12.10, GPL-2.0-or-later, com x264) é baixado
+                   do CDN jsDelivr/unpkg no navegador de quem converte; não fica neste repositório.
+heic-to.js         heic-to 1.6.7 — LGPL-3.0 (libheif) — https://github.com/hoppergee/heic-to
+UTIF.js            utif2 4.1.0 — MIT — https://github.com/photopea/UTIF.js
+pako_inflate.min.js pako 1.0.11 — MIT/Zlib — https://github.com/nodeca/pako
+pdf.min.mjs, pdf.worker.min.mjs  pdfjs-dist 4.10.38 — Apache-2.0 — https://github.com/mozilla/pdf.js

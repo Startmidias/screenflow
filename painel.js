@@ -3,7 +3,8 @@
 const CFG = window.STARTPLAY || window.SCREENFLOW || {};
 const A = window.SPAgenda;
 const BUCKET = "midia";
-const MAX_MB = 50;
+const MAX_MB = 50;            // depois de convertido (limite do armazenamento)
+const MAX_IN_MB = 600;        // arquivo original que o conversor aceita
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const ORIENT = { landscape: "Horizontal", portrait: "Vertical (girar para a direita)", portrait_ccw: "Vertical (girar para a esquerda)" };
 const EDITORIAS = ["Últimas notícias", "Brasil", "Mundo", "Economia", "Esportes", "Tecnologia", "Saúde e ciência", "Entretenimento", "Mato Grosso"];
@@ -86,7 +87,7 @@ function friendly(e) {
   if (/already registered/i.test(m)) return "Esse e-mail já tem conta. Use Entrar.";
   if (/Password should be/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
   if (/exceeded the maximum allowed size|Payload too large|413/i.test(m)) return `Arquivo grande demais (máximo ${MAX_MB} MB).`;
-  if (/mime type|invalid_mime/i.test(m)) return "Formato não aceito. Use JPG, PNG, WEBP, GIF, MP4 ou WEBM.";
+  if (/mime type|invalid_mime/i.test(m)) return "O armazenamento recusou esse tipo de arquivo. Tente enviar de novo: o painel converte para PNG, WEBP, JPG ou MP4.";
   if (/Valide a fonte/i.test(m)) return m.replace(/^.*?(Valide a fonte)/, "$1");
   if (/row-level security|permission denied/i.test(m)) return "Sem permissão. Entre com a conta de administrador.";
   if (/duplicate key|unique/i.test(m)) return "Já existe um registro igual para essa data.";
@@ -305,38 +306,24 @@ const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "im
 // imagens leves para TV Box
 // ---------------------------------------------------------------------------
 const MAX_SIDE = 1920, HEAVY = 1.2 * 1048576;
-async function decodeImage(blob) {
-  if (window.createImageBitmap) { try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); } catch (e) {} }
-  return await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Não consegui ler essa imagem.")); i.src = URL.createObjectURL(blob); });
+// Conversor automático (conversor.js): qualquer foto, PDF ou vídeo vira um
+// arquivo que as TVs abrem. Fotos: PNG/WEBP/JPEG conforme o que as TVs informam.
+async function prepImage(file, info) {
+  const f = tvFormats();
+  return SPConv.image(file, { info, target: outType(), webpOk: f.webpOk && canWebp(), maxSide: MAX_SIDE, heavy: HEAVY });
 }
-async function prepImage(file) {
-  if (file.type === "image/gif") return { file, changed: false };
-  const img = await decodeImage(file);
-  const w0 = img.width || img.naturalWidth, h0 = img.height || img.naturalHeight;
-  const scale = Math.min(1, MAX_SIDE / Math.max(w0, h0));
-  const target = outType();
-  const isJpeg = /jpe?g/.test(file.type);
-  const needs = scale < 1 || file.size > HEAVY || (isJpeg && target !== "image/jpeg");
-  if (!needs) return { file, w: w0, h: h0, w0, h0, changed: false };
-  const type = (!isJpeg && !(scale < 1 || file.size > HEAVY)) ? file.type : (target === "image/jpeg" && file.type === "image/png" && file.size <= HEAVY ? "image/png" : target);
-  const w = Math.round(w0 * scale), h = Math.round(h0 * scale);
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
-  const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, w, h);
-  g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, w, h);
-  if (img.close) img.close();
-  const blob = await new Promise(r => c.toBlob(r, type, 0.86));
-  if (!blob) return { file, w: w0, h: h0, w0, h0, changed: false };
-  const outT = blob.type || type;
-  const name = (file.name || "imagem").replace(/\.[^.]+$/, "") + "." + (EXT[outT] || "png");
-  return { file: new File([blob], name, { type: outT }), w, h, w0, h0, changed: true, before: file.size, converted: isJpeg && outT !== "image/jpeg" };
+// extensão que todas as TVs abrem
+function tvSafeImage(path) {
+  const e = ((path || "").match(/\.([a-z0-9]+)$/i) || [, ""])[1].toLowerCase(), f = tvFormats();
+  return e === "png" || (e === "webp" && f.webpOk) || ((e === "jpg" || e === "jpeg") && !f.noJpeg);
 }
-const isHeavy = m => m.kind === "image" && (!m.size_bytes || m.size_bytes > HEAVY) && !/\.gif$/i.test(m.path);
-const needsConvert = m => m.kind === "image" && /\.jpe?g$/i.test(m.path || "") && tvFormats().noJpeg;
+const isHeavy = m => m.kind === "image" && (!m.size_bytes || m.size_bytes > HEAVY);
+const needsConvert = m => m.kind === "image" && !tvSafeImage(m.path);
 async function optimizeExisting(m) {
   const r = await fetch(m.url, { cache: "no-store" });
   if (!r.ok) throw new Error(`Não consegui baixar a imagem de "${m.title}".`);
   const blob = await r.blob();
-  const p = await prepImage(new File([blob], m.path, { type: blob.type || "image/jpeg" }));
+  const p = await prepImage(new File([blob], m.path, { type: blob.type || "" }));
   if (!p.changed) { await sb.from("media").update({ size_bytes: blob.size }).eq("id", m.id); return false; }
   const newPath = `${uuid()}.${EXT[p.file.type] || "png"}`;
   const up = await sb.storage.from(BUCKET).upload(newPath, p.file, { cacheControl: "31536000", contentType: p.file.type, upsert: false });
@@ -779,7 +766,7 @@ function adRow(m, i, n, scrCtx) {
       <span class="kind">${m.kind === "video" ? "VÍDEO" : "FOTO"} · ${m.duration_sec}s</span></div>
     <div class="info"><div class="t1">${esc(m.title)}</div>
       <div class="t2 one">${clientName(m) ? `<b>${esc(clientName(m))}</b> · ` : ""}${daysText(m.days)} · ${timeText(hm(m.time_from), hm(m.time_to))} · ${period}${scrCtx ? (m.screen_ids && m.screen_ids.length ? "" : " · em todas as telas") : " · " + esc(where)}</div>
-      <div class="meta"><span class="chip ${cls}">${st}</span>${isHeavy(m) ? `<span class="chip warn">foto pesada</span>` : ""}${needsConvert(m) ? `<span class="chip warn">JPEG: a TV não abre</span>` : ""}${m.target_daily ? `<span class="chip">meta ${nf(m.target_daily)}/dia por tela</span>` : ""}</div>
+      <div class="meta"><span class="chip ${cls}">${st}</span>${isHeavy(m) ? `<span class="chip warn">foto pesada</span>` : ""}${needsConvert(m) ? `<span class="chip warn">convertendo para a TV</span>` : ""}${m.target_daily ? `<span class="chip">meta ${nf(m.target_daily)}/dia por tela</span>` : ""}</div>
       ${here}<div class="tvslot">${scrCtx ? "" : tvLine(m)}</div></div>
     <div class="acts">
       <button class="icon" data-a="up" aria-label="Subir na sequência" title="Subir na sequência" ${i === 0 ? "disabled" : ""}>${icon("up")}</button>
@@ -821,16 +808,29 @@ PAGES.anuncios = async function pageMedia(arg) {
   try { await need("media", "screens", "clients", "exceptions", "settings"); await loadStatsToday(); } catch (e) { pageError(e); return; }
   if (state.tab !== "anuncios") return;
   const main = $("#main");
-  const heavy = state.media.filter(m => isHeavy(m) || needsConvert(m));
-  const banner = heavy.length ? `<div class="card banner"><div><b>${heavy.length} foto(s) para ajustar.</b> <span class="sub">${tvFormats().noJpeg ? "Sua TV não abre JPEG: converto para um formato que ela abre." : "Fotos muito grandes podem não aparecer ou travar a TV Box."}</span></div>
-      <button class="btn sm" id="opt">Ajustar agora</button></div>` : "";
-  const bindOpt = () => $("#opt")?.addEventListener("click", async () => {
-    const b = $("#opt"); b.disabled = true; let n = 0;
-    try { for (const m of heavy) { b.innerHTML = `<span class="spin"></span> ${++n} de ${heavy.length}…`; await optimizeExisting(m); }
-      toast("Fotos ajustadas! A TV pega a versão nova em até 1 minuto.", 4000);
-    } catch (ex) { toast(friendly(ex), 5000); }
-    if (state.tab === "anuncios") PAGES.anuncios(arg);
-  });
+  // conversor automático: fotos que alguma TV não abre (ou pesadas demais) são
+  // convertidas sozinhas assim que esta página abre; ninguém precisa clicar.
+  state.convTried = state.convTried || new Set();
+  const heavy = state.media.filter(m => (isHeavy(m) || needsConvert(m)) && !state.convTried.has(m.id));
+  const banner = heavy.length ? `<div class="card banner" id="optb"><div><span class="spin dark"></span> <b id="optt">Convertendo ${heavy.length} foto(s) para o formato da TV…</b>
+      <span class="sub">${tvFormats().noJpeg ? "Uma das TVs não abre JPEG: o painel converte sozinho." : "Fotos muito grandes podem travar a TV Box: o painel deixa mais leves."}</span></div></div>` : "";
+  const bindOpt = () => {
+    if (!heavy.length || state.convBusy) return;
+    state.convBusy = true;
+    (async () => {
+      let n = 0, done = 0, fail = null;
+      for (const m of heavy) {
+        state.convTried.add(m.id);
+        const el = $("#optt"); if (el) el.textContent = `Convertendo ${++n} de ${heavy.length} para o formato da TV…`;
+        try { if (await optimizeExisting(m)) done++; } catch (ex) { fail = fail || ex; }
+      }
+      state.convBusy = false;
+      if (done) toast(`${done} anúncio(s) convertido(s). As TVs pegam a versão nova em até 1 minuto.`, 5000);
+      if (fail) toast(friendly(fail), 6000);
+      const back = (location.hash || "").replace(/^#/, "");
+      if (state.tab === "anuncios") PAGES.anuncios(back.split("/").slice(1).join("/") || undefined);
+    })();
+  };
   const t = today();
 
   // pasta de uma TV: a sequência que passa nela
@@ -917,9 +917,19 @@ async function restoreVersion(id) {
   return true;
 }
 
+// a prévia segue a mesma regra do player: arte de formato parecido com o da
+// tela preenche tudo (corta uma faixa fina); muito diferente aparece inteira
+// com o fundo preenchido pela própria arte.
+window.spFit = el => {
+  const a = el.parentElement, w = el.naturalWidth || el.videoWidth, h = el.naturalHeight || el.videoHeight;
+  if (!a || !w || !h || !a.clientWidth || !a.clientHeight) return;
+  const r = w / h, sc = a.clientWidth / a.clientHeight, fill = 1 - Math.min(r, sc) / Math.max(r, sc) <= 0.2;
+  el.style.objectFit = fill ? "cover" : "contain";
+  const bd = a.querySelector(".bd"); if (bd) bd.style.display = fill ? "none" : "";
+};
 function tvPreview(url, isVid, vertical, band) {
-  return `<div class="tvprev ${vertical ? "v" : ""}">${isVid ? "" : `<div class="bd" style="background-image:url('${esc(url)}')"></div>`}
-    ${isVid ? `<video src="${esc(url)}#t=1" muted preload="metadata" playsinline></video>` : `<img src="${esc(url)}" alt="">`}<span class="lbl">COMO FICA NA TV · ${vertical ? "VERTICAL" : "HORIZONTAL"}</span>
+  return `<div class="tvprev ${vertical ? "v" : ""}"><div class="area${band ? " b" : ""}">${isVid ? "" : `<div class="bd" style="background-image:url('${esc(url)}')"></div>`}
+    ${isVid ? `<video src="${esc(url)}#t=1" muted preload="metadata" playsinline onloadedmetadata="spFit(this)"></video>` : `<img src="${esc(url)}" alt="" onload="spFit(this)">`}</div><span class="lbl">COMO FICA NA TV · ${vertical ? "VERTICAL" : "HORIZONTAL"}</span>
     ${band ? `<div class="mock"><b>${band === "news" ? "NOTÍCIAS" : "START PLAY"}</b><span>${band === "news" ? `<em>UOL •</em> Manchete do dia rola aqui` : esc(state.settings.promo_text || "Anuncie aqui")}</span></div>` : ""}</div>`;
 }
 function videoDuration(file) {
@@ -940,10 +950,10 @@ function mediaForm(m, preset) {
   modal(`<h2>${edit ? "Editar anúncio" : "Novo anúncio"}</h2>
     <div id="step1"><div class="cols"><form id="f-media">
       <div class="field"><label>Arquivo</label>
-        <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" class="hide">
+        <input type="file" id="file" accept="image/*,video/*,application/pdf,.heic,.heif,.tif,.tiff,.mov,.mkv,.avi,.wmv,.flv,.mpg,.mpeg,.m4v,.3gp,.ts" class="hide">
         <div class="drop ${edit ? "has" : ""}" id="drop" tabindex="0" role="button">${edit
           ? `<div class="preview"><div class="thumb">${m.kind === "video" ? `<video src="${esc(m.url)}#t=1" muted preload="metadata"></video>` : `<img src="${esc(m.url)}" alt="">`}</div><div><strong>Arquivo atual</strong><div class="t2">Clique para trocar</div></div></div>`
-          : `<strong>Escolher foto ou vídeo</strong><div>JPG, PNG, WEBP, MP4 · até ${MAX_MB} MB · horizontal 1920×1080 ou vertical 1080×1920</div>`}</div></div>
+          : `<strong>Escolher foto, vídeo ou PDF</strong><div>Qualquer formato (JPG, PNG, HEIC do iPhone, PDF, MOV, MP4, AVI…) · o painel converte para o formato da TV · ideal 1920×1080 (horizontal) ou 1080×1920 (vertical)</div>`}</div></div>
       <div id="prep"></div>
       <div class="field"><label for="title">Título</label><input class="in" id="title" maxlength="120" required value="${esc(m?.title || "")}" placeholder="Ex.: Promoção de verão"></div>
       <div class="grid2">
@@ -1017,21 +1027,46 @@ function mediaForm(m, preset) {
   $("#newcli").addEventListener("click", e => { e.preventDefault(); closeModal(); location.hash = "clientes/novo"; });
   $("#f-media").addEventListener("input", () => estimate());
   $("#rv")?.addEventListener("click", async () => { if (await restoreVersion(m.id)) closeModal(); });
+  const drop0 = $("#drop").innerHTML;
+  let picks = 0;
   async function choose(f) {
     err("");
-    if (!/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(f.type)) { err("Formato não aceito. Use JPG, PNG, WEBP, GIF, MP4 ou WEBM."); return; }
-    if (f.size > MAX_MB * 1048576) { err(`Esse arquivo tem ${fmtMB(f.size)}. O máximo é ${MAX_MB} MB.`); return; }
+    const my = ++picks;
     file = null; vidDur = null; note = "";
-    const isVid = f.type.startsWith("video/");
     $("#prep").innerHTML = ""; $("#next").disabled = true;
-    if (!isVid) {
-      $("#drop").innerHTML = `<div class="preview"><span class="spin dark"></span><div><strong>${esc(f.name)}</strong><div class="t2">Preparando para a TV…</div></div></div>`;
-      try {
-        const p = await prepImage(f); f = p.file;
-        if (p.changed) note = `<div class="ok-box">Preparada para a TV: ${p.w0}×${p.h0} → ${p.w}×${p.h} · ${fmtMB(p.before)} → ${fmtMB(f.size)}${p.converted ? ` · convertida para ${EXT[f.type].toUpperCase()} (a TV não abre JPEG)` : ""}</div>`;
-        if (p.h > p.w) note += `<div class="info-box">Foto em pé: nas telas horizontais ela aparece no centro com o fundo desfocado; nas telas verticais ocupa a tela toda.</div>`;
-      } catch (ex) { $("#next").disabled = false; err(friendly(ex)); return; }
-    }
+    const stop = msg => { if (my !== picks) return; $("#drop").classList.toggle("has", edit); $("#drop").innerHTML = drop0; $("#next").disabled = false; err(msg); };
+    let info = { kind: null };
+    try { info = await SPConv.sniff(f); } catch (e) {}
+    if (my !== picks) return;
+    if (!info.kind) { stop(info.fmt === "audio" ? "Esse arquivo é só áudio. Envie uma foto, um vídeo ou um PDF." : "Não reconheci esse arquivo. Envie a arte do anúncio como foto, vídeo ou PDF."); return; }
+    if (f.size > MAX_IN_MB * 1048576) { stop(`Esse arquivo tem ${fmtMB(f.size)}. O máximo é ${MAX_IN_MB} MB.`); return; }
+    let animated = false;
+    if (info.fmt === "gif") { try { animated = (await SPConv.gifInfo(f)).frames > 1; } catch (e) {} }
+    const isVid = info.kind === "video" || animated;
+    const show = (fr, t) => {
+      if (my !== picks) return;
+      const pct = fr == null ? null : Math.round(fr * 100);
+      $("#drop").innerHTML = `<div class="preview"><span class="spin dark"></span><div style="flex:1;min-width:0"><strong>${esc(f.name)}</strong><div class="t2">${esc(t)}</div>${pct == null ? "" : `<div class="pbar"><i style="width:${pct}%"></i></div>`}</div></div>`;
+    };
+    try {
+      if (!isVid) {
+        show(null, info.fmt === "pdf" ? "Lendo o PDF…" : `Preparando para a TV (${info.name})…`);
+        const p = await prepImage(f, info);
+        if (my !== picks) return;
+        f = p.file;
+        if (p.changed) note = `<div class="ok-box">Preparada para a TV: ${esc(p.from)} ${p.w0}×${p.h0} → ${esc(p.to)} ${p.w}×${p.h} · ${fmtMB(p.before)} → ${fmtMB(f.size)}</div>`;
+        (p.notes || []).forEach(n => { note += `<div class="info-box">${esc(n)}</div>`; });
+        if (p.h > p.w) note += `<div class="info-box">Arte em pé: nas telas horizontais ela aparece inteira com o fundo preenchido pela própria arte; nas telas verticais ocupa a tela toda.</div>`;
+      } else {
+        show(0, animated ? "GIF animado: vou transformar em vídeo…" : "Analisando o vídeo…");
+        const v = await SPConv.video(f, { info, maxMB: MAX_MB, onProgress: (fr, t) => show(fr, t) });
+        if (my !== picks) return;
+        f = v.file; vidDur = v.duration || null;
+        if (v.changed) note = `<div class="ok-box">${v.remux ? "Ajustado" : "Convertido"} para a TV: ${esc(v.from)} → MP4 (H.264) · ${fmtMB(v.before)} → ${fmtMB(f.size)}</div>`;
+        (v.notes || []).forEach(n => { note += `<div class="info-box">${esc(n)}</div>`; });
+      }
+    } catch (ex) { stop(friendly(ex)); return; }
+    if (f.size > MAX_MB * 1048576) { stop(`Mesmo depois de converter, o arquivo ficou com ${fmtMB(f.size)}. O máximo é ${MAX_MB} MB.`); return; }
     file = f;
     prevUrl = URL.createObjectURL(f); prevVid = isVid;
     $("#drop").classList.add("has");
@@ -1042,9 +1077,9 @@ function mediaForm(m, preset) {
     const base = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
     if (!$("#title").value && !looksAuto(base)) $("#title").value = base.slice(0, 120);
     if (isVid) {
-      vidDur = await videoDuration(f);
+      vidDur = vidDur || await videoDuration(f);
       if (vidDur && vidDur > 600) { err("Vídeo com mais de 10 minutos. Envie um vídeo mais curto."); file = null; return; }
-      if (vidDur) $("#dur").value = Math.max(3, Math.ceil(vidDur));
+      if (vidDur) $("#dur").value = Math.max(3, Math.ceil(vidDur - 0.25));   // 6,02 s conta como 6 s
       $("#dur").disabled = true; $("#dur-hint").textContent = "Para vídeo, vale a duração do próprio vídeo.";
     } else { $("#dur").disabled = false; $("#dur-hint").textContent = "Quanto tempo a foto fica na tela."; }
     estimate();
@@ -1109,7 +1144,7 @@ function mediaForm(m, preset) {
         row.url = sb.storage.from(BUCKET).getPublicUrl(newPath).data.publicUrl;
         row.kind = file.type.startsWith("video/") ? "video" : "image";
         row.size_bytes = file.size;
-        if (row.kind === "video" && vidDur) row.duration_sec = Math.min(600, Math.max(3, Math.ceil(vidDur)));
+        if (row.kind === "video" && vidDur) row.duration_sec = Math.min(600, Math.max(3, Math.ceil(vidDur - 0.25)));
       }
       if (edit) {
         const { error } = await sb.from("media").update(row).eq("id", m.id); if (error) throw error;

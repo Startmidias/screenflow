@@ -17,10 +17,11 @@
   .layer{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;overflow:hidden;
     -webkit-transition:opacity .6s ease;transition:opacity .6s ease;background:#000}
   .layer.on{opacity:1}
-  .layer .bd{position:absolute;left:-6%;top:-6%;width:112%;height:112%;background-size:cover;background-position:center;
-    -webkit-filter:blur(2.2rem) brightness(.55);filter:blur(2.2rem) brightness(.55)}
   .layer img,.layer video,.layer canvas{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:block}
+  .layer .fill{object-fit:cover}
+  .layer canvas.bdc{object-fit:fill}
   .layer video{background:#000}
+  .layer video.over{background:transparent}
 
   /* telas cheias (mensagem e "Anuncie aqui") */
   .full{position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:hidden;
@@ -113,7 +114,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.0.0";
+  var VERSION = "3.1.0";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -145,6 +146,13 @@
       im.onerror = function(){ FMT[k] = false };
       im.src = t[k];
     });
+    // vídeo: o que o aparelho diz que toca (o painel sempre envia MP4 H.264)
+    try {
+      var v = document.createElement("video");
+      FMT.h264 = !!v.canPlayType('video/mp4; codecs="avc1.4D401F"');
+      FMT.hevc = !!v.canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"');
+      FMT.vp9 = !!v.canPlayType('video/webm; codecs="vp9"');
+    } catch(e){}
   })();
 
   function $(id){ return document.getElementById(id) }
@@ -676,9 +684,14 @@
       v.preload = "auto"; v.muted = S.muted || !!PREVIEW; v.src = src;
       L.appendChild(v);
       var started = false, lastT = -1, stuck = 0;
+      v.addEventListener("loadedmetadata", function(){
+        if(v.videoWidth && v.videoHeight && fills(v.videoWidth, v.videoHeight)) v.className = "fill";
+      });
       v.addEventListener("playing", function(){
         if(started || !alive()) return;
-        started = true; show();
+        started = true;
+        if(v.className !== "fill" && v.videoWidth){ v.className = "over"; backdrop(v) }
+        show();
         clearTimeout(S.timer);
         var max = (isFinite(v.duration) && v.duration > 0 ? v.duration + 5 : 600) * 1000;
         S.timer = setTimeout(function(){ if(alive()) finish() }, Math.min(max, 600000));
@@ -699,20 +712,32 @@
       S.timer = setTimeout(function(){ if(!started) skip("vídeo demorou demais para abrir") }, 25000);
     }
 
+    // Tela cheia: se o formato da arte é parecido com o da tela (até 20% de diferença,
+    // caso de uma arte 16:9 com o rodapé ligado), ela preenche a área toda cortando
+    // uma faixa fina nas bordas. Se é bem diferente (foto em pé numa TV deitada),
+    // aparece inteira com o fundo preenchido pela própria arte, desfocada.
+    function fills(w, h){
+      var sw = G.RW || window.innerWidth, sh = Math.max(1, (G.RH || window.innerHeight) - G.bh);
+      var r = w / h, s = sw / sh;
+      return 1 - Math.min(r, s) / Math.max(r, s) <= 0.2;
+    }
+    function backdrop(el){
+      try {
+        var c = document.createElement("canvas"); c.width = 32; c.height = 18; c.className = "bdc";
+        var g = c.getContext("2d"); g.drawImage(el, 0, 0, 32, 18);
+        g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(0, 0, 32, 18);
+        L.insertBefore(c, L.firstChild);
+      } catch(e){}
+    }
+
     function playImage(src, blob){
       var img = new Image(), done = false;
       img.decoding = "async";
       function showImage(el, w, h, bdUrl){
         if(!w || !h){ skip("imagem vazia"); return }
         if(w * h > MAX_PIXELS){ skip("imagem grande demais (" + w + "x" + h + ")"); return }
-        // foto de outro formato: fundo desfocado com a própria foto
-        var sw = G.RW || window.innerWidth, sh = Math.max(1, (G.RH || window.innerHeight) - G.bh);
-        var screenRatio = sw / sh, ratio = w / h;
-        if(bdUrl && Math.abs(ratio - screenRatio) / screenRatio > 0.12){
-          var bd = document.createElement("div"); bd.className = "bd";
-          bd.style.backgroundImage = "url(\"" + bdUrl.replace(/"/g, "%22") + "\")";
-          L.appendChild(bd);
-        }
+        if(fills(w, h)) el.className = "fill";
+        else backdrop(el);
         L.appendChild(el);
         show();
         S.timer = setTimeout(function(){ if(alive()) finish() }, Math.max(3, item.duration || 10) * 1000);
