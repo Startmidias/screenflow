@@ -317,7 +317,7 @@ function canWebp() {
   return webpEnc;
 }
 function outType() { const f = tvFormats(); if (!f.noJpeg) return "image/jpeg"; return f.webpOk && canWebp() ? "image/webp" : "image/png"; }
-const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/webm": "webm" };
 
 // ---------------------------------------------------------------------------
 // imagens leves para TV Box
@@ -1093,7 +1093,7 @@ function mediaForm(m, preset) {
       ${edit ? `<button type="button" class="btn ghost sm" id="rv">${icon("undo")} Restaurar versão anterior</button>` : ""}</div></div>
     <div class="modal-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn" type="button" id="next">Revisar e publicar</button></div></div>
     <div id="step2" class="hide"></div>`, "wide");
-  let file = null, vidDur = null, prevUrl = m?.url || null, prevVid = m?.kind === "video", note = "";
+  let file = null, fileVid = false, vidDur = null, prevUrl = m?.url || null, prevVid = m?.kind === "video", note = "";
   let design = preset && preset.design ? preset.design : null, designAssets = (preset && preset.assets) || {};
   const err = t => { $("#f-err").innerHTML = t ? `<div class="err-box">${esc(t)}</div>` : ""; };
   const days = () => $$("#ad .on").map(b => Number(b.dataset.d));
@@ -1132,7 +1132,7 @@ function mediaForm(m, preset) {
     const c = clientById($("#cli").value);
     $("#adv-f").classList.toggle("hide", !!c);
     if (c && c.daily_insertions && !$("#tg").value) $("#tg").value = c.daily_insertions;
-    if (c && !edit && c.ad_seconds && !file?.type?.startsWith("video/")) $("#dur").value = c.ad_seconds;
+    if (c && !edit && c.ad_seconds && !fileVid) $("#dur").value = c.ad_seconds;
     estimate();
   });
   $("#newcli").addEventListener("click", e => { e.preventDefault(); closeModal(); location.hash = "clientes/novo"; });
@@ -1143,7 +1143,7 @@ function mediaForm(m, preset) {
   async function choose(f) {
     err("");
     const my = ++picks;
-    file = null; vidDur = null; note = "";
+    file = null; fileVid = false; vidDur = null; note = "";
     $("#prep").innerHTML = ""; $("#next").disabled = true;
     const stop = msg => { if (my !== picks) return; $("#drop").classList.toggle("has", edit); $("#drop").innerHTML = drop0; $("#next").disabled = false; err(msg); };
     let info = { kind: null };
@@ -1178,7 +1178,11 @@ function mediaForm(m, preset) {
       }
     } catch (ex) { stop(friendly(ex)); return; }
     if (f.size > MAX_MB * 1048576) { stop(`Mesmo depois de converter, o arquivo ficou com ${fmtMB(f.size)}. O máximo é ${MAX_MB} MB.`); return; }
-    file = f;
+    // foto ou vídeo é decidido pelo conteúdo do arquivo, nunca pelo tipo que o aparelho informou
+    // (no Windows e em alguns celulares um MP4 chega sem tipo e virava "Foto" na revisão)
+    const want = isVid ? "video/mp4" : (f.type && EXT[f.type] && !f.type.startsWith("video/") ? f.type : "image/png");
+    if (f.type !== want) f = new File([f], f.name.replace(/\.[^.]+$/, "") + "." + EXT[want], { type: want });
+    file = f; fileVid = isVid;
     prevUrl = URL.createObjectURL(f); prevVid = isVid;
     $("#drop").classList.add("has");
     $("#drop").innerHTML = `<div class="preview"><div class="thumb">${isVid ? `<video src="${prevUrl}" muted></video>` : `<img src="${prevUrl}" alt="">`}</div>
@@ -1229,7 +1233,7 @@ function mediaForm(m, preset) {
     $("#step2").innerHTML = `<div class="cols"><div>
       <div class="box"><h3>Resumo</h3><table><tbody>
         <tr><td class="sub">Anúncio</td><td><b>${esc(title)}</b>${c ? " · " + esc(c.name) : $("#adv").value.trim() ? " · " + esc($("#adv").value.trim()) : ""}</td></tr>
-        <tr><td class="sub">Arquivo</td><td>${file ? `${file.type.startsWith("video/") ? "Vídeo" : "Foto"} ${esc(EXT[file.type] ? EXT[file.type].toUpperCase() : file.type)} · ${fmtMB(file.size)}` : "o atual (sem troca)"} · ${d.duration}s na tela</td></tr>
+        <tr><td class="sub">Arquivo</td><td>${file ? `${fileVid ? "Vídeo" : "Foto"} ${esc((EXT[file.type] || "").toUpperCase())} · ${fmtMB(file.size)}` : "o atual (sem troca)"} · ${d.duration}s na tela</td></tr>
         <tr><td class="sub">Vigência</td><td>${d1 ? fmtDate(d1) : "a partir de hoje"} → ${d2 ? fmtDate(d2) : "sem data de fim"}</td></tr>
         <tr><td class="sub">Dias</td><td>${daysText(d.days)}</td></tr>
         <tr><td class="sub">Horário</td><td>${timeText(d.from, d.to)}</td></tr>
@@ -1274,7 +1278,7 @@ function mediaForm(m, preset) {
         if (up.error) throw up.error;
         row.path = newPath;
         row.url = sb.storage.from(BUCKET).getPublicUrl(newPath).data.publicUrl;
-        row.kind = file.type.startsWith("video/") ? "video" : "image";
+        row.kind = fileVid ? "video" : "image";
         row.size_bytes = file.size;
         if (row.kind === "video" && vidDur) row.duration_sec = Math.min(600, Math.max(3, Math.ceil(vidDur - 0.25)));
       }

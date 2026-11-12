@@ -8,7 +8,7 @@ O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link.
 
 | Pasta / arquivo | O que é |
 |---|---|
-| `index.html` | Player da TV 3.3: anúncios em tela cheia e em loop, tela "Anuncie aqui" com QR code para o WhatsApp, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição |
+| `index.html` | Player da TV 3.3: anúncios em tela cheia e em loop, tela "Anuncie aqui" com QR code para o WhatsApp, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição. Desde a 3.3.1 toca um vídeo por vez (solta o decodificador da TV Box antes do próximo) e se recarrega sozinho se vídeos travarem seguidos |
 | `agenda.js` | Regras de horário compartilhadas pelo player e pelo painel (expediente, virada da meia-noite, feriados, dias e horários dos anúncios, estimativa de inserções) |
 | `sw.js` | Guarda o player no aparelho para abrir mesmo sem internet |
 | `jpeg-decoder.js` | Plano B para fotos que o TV Box não consegue abrir sozinho (jpeg-js, licença BSD-3) |

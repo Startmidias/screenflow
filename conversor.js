@@ -165,7 +165,15 @@
   }
   const sizeOf = x => ({ w: x.width || x.naturalWidth, h: x.height || x.naturalHeight });
 
-  const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4" };
+  // Arquivo que já serve para a TV, mas veio com o tipo errado ou vazio (acontece no
+  // Windows e em alguns celulares): a mesma coisa, com o tipo e a extensão certos.
+  // Sem isso a revisão mostrava "Foto" num vídeo e o armazenamento recusava o envio.
+  function typed(file, mime) {
+    const ext = EXT[mime], base = (file.name || (mime.startsWith("video/") ? "video" : "imagem")).replace(/\.[^.]+$/, "");
+    if (file.type === mime && new RegExp("\\." + ext + "$", "i").test(file.name || "")) return file;
+    return new File([file], base + "." + ext, { type: mime, lastModified: file.lastModified });
+  }
   // opts: { target: "image/jpeg"|"image/webp"|"image/png", maxSide, heavy }
   async function image(file, opts) {
     opts = opts || {};
@@ -181,7 +189,8 @@
     if (info.fmt === "pdf" && src.pages > 1) notes.push(`O PDF tem ${src.pages} páginas: usei a primeira.`);
     if (tvOk && scale === 1 && file.size <= heavy) {
       if (src.close) src.close();
-      return { file, w: w0, h: h0, w0, h0, changed: false, from: info.name, notes };
+      const mime = info.fmt === "png" ? "image/png" : info.fmt === "webp" ? "image/webp" : "image/jpeg";
+      return { file: typed(file, mime), w: w0, h: h0, w0, h0, changed: false, from: info.name, notes };
     }
     const w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
     const c = document.createElement("canvas"); c.width = w; c.height = h;
@@ -307,7 +316,7 @@
         const small = Math.max(probe.w, probe.h) <= 1920 && Math.min(probe.w, probe.h) <= 1088;
         const rate = probe.duration ? file.size * 8 / probe.duration : 0;
         if (vOk && aOk && small && rate <= 12e6 && file.size <= maxMB * 1048576) {
-          if (info.fmt === "mp4" && probe.faststart) return { file, changed: false, from: "MP4 (H.264)", duration: probe.duration, notes: [] };
+          if (info.fmt === "mp4" && probe.faststart) return { file: typed(file, "video/mp4"), changed: false, from: "MP4 (H.264)", duration: probe.duration, notes: [] };
           mode = "remux";
         }
       }

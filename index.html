@@ -115,12 +115,12 @@
 </div>
 
 <script src="config.js"></script>
-<script src="agenda.js?v=3.3.0"></script>
-<script src="cartoes.js?v=3.3.0"></script>
+<script src="agenda.js?v=3.3.1"></script>
+<script src="cartoes.js?v=3.3.1"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.3.0";
+  var VERSION = "3.3.1";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -135,7 +135,7 @@
   var S = { id:null, name:"", cfg:null, items:[], prog:null, key:null, pend:null, idx:-1, layer:0, timer:null, cur:null, started:0,
             online:true, offlineSince:null, muted:false, skips:0, ok:0, err:0, lastErr:"", lastErrAt:null, boot:Date.now(),
             token:0, skew:0, sleeping:false, override:null, ovNews:null, cfgKey:"", failAt:{},
-            sinceCard:0, cardIdx:0, card:null, cards:0, shotAt:0, reloadDue:false };
+            sinceCard:0, cardIdx:0, card:null, cards:0, shotAt:0, reloadDue:false, vfails:0 };
   var T = { items:[], at:0, ids:"", timer:null, k:0, plan:null, seg:null, segTimer:null, els:[], nextAt:0, pump:null,
             paused:false, pauseAt:0, err:null };
   var G = { W:0, H:0, RW:0, RH:0, rem:30, bh:0, rot:0 };
@@ -658,7 +658,44 @@
   function tickClock(){ if(T.plan) $("b-clock").textContent = parts().hm }
 
   // ---------- reprodução ----------
-  function clearLayer(L){ L.innerHTML = ""; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
+  // TV Box barata tem um decodificador de vídeo só. Tirar o <video> da tela não basta:
+  // o aparelho continua preso a ele até o navegador fazer a faxina, e o próximo vídeo
+  // trava (ou a TV Box congela e reinicia). Aqui o vídeo solta o decodificador na hora.
+  function freeVideo(v){
+    try { v.pause() } catch(e){}
+    try { v.removeAttribute("src"); v.load() } catch(e){}
+  }
+  // troca os vídeos de uma camada pelo último quadro (sem piscar preto) e solta o decodificador
+  function releaseVideos(L, keepFrame){
+    var vs = L.getElementsByTagName("video");
+    for(var i = vs.length - 1; i >= 0; i--){
+      var v = vs[i];
+      if(keepFrame && v.videoWidth && v.videoHeight && v.readyState >= 2){
+        try {
+          var k = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+          var c = document.createElement("canvas");
+          c.width = Math.max(1, Math.round(v.videoWidth * k)); c.height = Math.max(1, Math.round(v.videoHeight * k));
+          c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+          c.className = v.className;
+          v.parentNode.insertBefore(c, v);
+        } catch(e){}
+      }
+      freeVideo(v);
+      if(v.parentNode) v.parentNode.removeChild(v);
+    }
+  }
+  function clearLayer(L){ releaseVideos(L, false); L.innerHTML = ""; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
+  // vídeos travando seguidos: recarrega o player (solta tudo, como um reinício) em vez de
+  // deixar a TV Box congelar. No máximo uma vez a cada 15 minutos.
+  function videoTrouble(){
+    if(PREVIEW || ++S.vfails < 3) return false;
+    var last = parseInt(ls("sp_heal") || "0", 10) || 0;
+    if(Math.abs(Date.now() - last) < 15 * 60000) return false;
+    ls("sp_heal", String(Date.now()));
+    log("vídeos travando seguidos: recarregando o player");
+    setTimeout(function(){ location.reload() }, 300);
+    return true;
+  }
   function stop(){
     clearTimeout(S.timer); S.timer = null; S.cur = null; S.card = null; S.token++;
     for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; clearLayer(L) }
@@ -667,9 +704,11 @@
   function finish(how){
     if(S.cur){
       var secs = (Date.now() - S.started) / 1000;
+      var wasVid = S.cur.kind === "video";
       if(how === "stalled") record(S.cur, "interrupted", secs, "vídeo travou");
-      else if(secs >= 2){ S.ok++; record(S.cur, "ok", secs) }
+      else if(secs >= 2){ S.ok++; record(S.cur, "ok", secs); if(wasVid) S.vfails = 0 }
       S.cur = null; S.sinceCard++;
+      if(how === "stalled"){ stop(); if(videoTrouble()) return }
     }
     next();
   }
@@ -688,6 +727,7 @@
     var list = cardList(), spec = list[S.cardIdx % list.length];
     S.cardIdx++;
     var token = ++S.token, L = $("L" + (1 - S.layer)), old = $("L" + S.layer);
+    releaseVideos(old, true);
     clearLayer(L);
     var c = document.createElement("canvas");
     var w = G.RW || window.innerWidth, h = Math.max(1, (G.RH || window.innerHeight) - G.bh), k = Math.min(2, window.devicePixelRatio || 1);
@@ -842,6 +882,7 @@
       fail(why, item);
       record(item, "failed", 0, why);
       clearLayer(L);
+      if(item.kind === "video" && videoTrouble()) return;
       if(++S.skips >= S.items.length){
         S.skips = 0;
         msg("Não consegui abrir os anúncios",
@@ -851,6 +892,7 @@
       S.timer = setTimeout(next, 300);
     }
 
+    releaseVideos(old, true);       // um decodificador por vez: o vídeo anterior sai antes do próximo abrir
     clearLayer(L);
     localBlob(item.url).then(function(blob){
       if(!alive()) return;
