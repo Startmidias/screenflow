@@ -8,7 +8,7 @@ O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link.
 
 | Pasta / arquivo | O que é |
 |---|---|
-| `index.html` | Player da TV 3.3: anúncios em tela cheia e em loop, tela "Anuncie aqui" com QR code para o WhatsApp, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição. Desde a 3.3.1 toca um vídeo por vez (solta o decodificador da TV Box antes do próximo) e se recarrega sozinho se vídeos travarem seguidos |
+| `index.html` | Player da TV 3.3: anúncios em tela cheia e em loop, tela "Anuncie aqui" com QR code para o WhatsApp, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição. Desde a 3.3.1 toca um vídeo por vez (solta o decodificador da TV Box antes do próximo) e se recarrega sozinho se vídeos travarem seguidos. Na 3.4, com o app 2.0, o vídeo toca direto no aparelho (nativo) |
 | `agenda.js` | Regras de horário compartilhadas pelo player e pelo painel (expediente, virada da meia-noite, feriados, dias e horários dos anúncios, estimativa de inserções) |
 | `sw.js` | Guarda o player no aparelho para abrir mesmo sem internet |
 | `jpeg-decoder.js` | Plano B para fotos que o TV Box não consegue abrir sozinho (jpeg-js, licença BSD-3) |
@@ -24,7 +24,7 @@ O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link.
 | `supabase/atualizacao-02.sql` … `08.sql` | Atualizações, em ordem. Cada uma pode ser rodada de novo sem estragar nada. A 05 liga o pg_cron/pg_net: a cada minuto o banco confere as TVs (aviso de TV fora do ar por WhatsApp/e-mail) e busca clima, cotação e futebol. A 06 traz a cotação reserva (Banco Central Europeu). A 07 fecha as funções internas para a internet e limpa sozinha, de hora em hora, aparelhos nunca pareados. A 08 transforma exibições antigas em totais por dia (o banco não estoura os 500 MB do plano gratuito), faz uma cópia de segurança por dia e cria o link do anunciante |
 | `.github/workflows/manter-ativo.yml` | Consulta diária ao banco para o plano gratuito do Supabase não pausar o projeto |
 | `supabase/functions/noticias/` | Função que busca os feeds de notícias, limpa e entrega as manchetes às TVs |
-| `startplay.apk` | App START PLAY para TV Box (tela inicial em modo quiosque) |
+| `startplay.apk` | App START PLAY para TV Box 2.0 (tela inicial em modo quiosque; vídeo nativo, vigia que reabre o app e informa temperatura/memória). Fonte em `app-tv/` (`./build.sh`; precisa da chave original) |
 | `app-tv/` | Código do app da TV (smali + interface em HTML) e o script de build |
 | `version.txt` | Versão do player; quando muda, as TVs recarregam sozinhas |
 

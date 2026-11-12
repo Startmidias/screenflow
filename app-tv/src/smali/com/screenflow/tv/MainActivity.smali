@@ -48,6 +48,16 @@
     invoke-virtual {v2, v1}, Landroid/webkit/WebView;->setBackgroundColor(I)V
     invoke-virtual {v0, v2}, Landroid/widget/FrameLayout;->addView(Landroid/view/View;)V
 
+    # 2.0: vídeo nativo por baixo do player (se falhar, o player segue com o vídeo do navegador)
+    :nv_try
+    invoke-static {p0, v0, v2}, Lcom/screenflow/tv/nv/NativeVideo;->attach(Landroid/app/Activity;Landroid/widget/FrameLayout;Landroid/webkit/WebView;)V
+    :nv_try_end
+    .catch Ljava/lang/Throwable; {:nv_try .. :nv_try_end} :nv_catch
+    goto :nv_ok
+    :nv_catch
+    move-exception v4
+    :nv_ok
+
     # ui (por cima, fundo transparente)
     invoke-virtual {p0}, Lcom/screenflow/tv/MainActivity;->makeWebView()Landroid/webkit/WebView;
     move-result-object v3
@@ -176,6 +186,11 @@
     :np
     const-string v0, "window.onAppResume&&onAppResume()"
     invoke-virtual {p0, v0}, Lcom/screenflow/tv/MainActivity;->runUiJs(Ljava/lang/String;)V
+    :nv_try
+    invoke-static {}, Lcom/screenflow/tv/nv/NativeVideo;->onResume()V
+    :nv_try_end
+    .catch Ljava/lang/Throwable; {:nv_try .. :nv_try_end} :nv_catch
+    :nv_catch
     return-void
 .end method
 
@@ -187,6 +202,11 @@
     if-eqz v0, :np
     invoke-virtual {v0}, Landroid/webkit/WebView;->onPause()V
     :np
+    :nv_try
+    invoke-static {}, Lcom/screenflow/tv/nv/NativeVideo;->onPause()V
+    :nv_try_end
+    .catch Ljava/lang/Throwable; {:nv_try .. :nv_try_end} :nv_catch
+    :nv_catch
     return-void
 .end method
 

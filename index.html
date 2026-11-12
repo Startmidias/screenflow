@@ -21,6 +21,9 @@
   .layer .fill{object-fit:cover}
   .layer canvas.bdc{object-fit:fill}
   .layer video{background:#000}
+  /* app START PLAY TV 2.0: o vídeo toca no aparelho, por baixo da página */
+  html.nv,html.nv body,html.nv #root,html.nv #stage{background:transparent!important}
+  .nvh{position:absolute;left:0;top:0;width:100%;height:100%}
   .layer video.over{background:transparent}
 
   /* telas cheias (mensagem e "Anuncie aqui") */
@@ -115,12 +118,12 @@
 </div>
 
 <script src="config.js"></script>
-<script src="agenda.js?v=3.3.1"></script>
-<script src="cartoes.js?v=3.3.1"></script>
+<script src="agenda.js?v=3.4.0"></script>
+<script src="cartoes.js?v=3.4.0"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.3.1";
+  var VERSION = "3.4.0";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -141,6 +144,10 @@
   var G = { W:0, H:0, RW:0, RH:0, rem:30, bh:0, rot:0 };
   var M = { on:!!(window.caches && window.isSecureContext && !PREVIEW), name:"sp-media-v1", busy:false, ready:{}, bad:{} };
   var Q = { key:"sp_queue", busy:false, timer:null };
+  // vídeo nativo: o app 2.0 toca o vídeo direto no decodificador do aparelho (bem mais leve que o navegador)
+  var NV = { on:false, ver:"", id:0, seq:0, cb:{}, bad:0 };
+  try { if(!PREVIEW && window.SPVideo && SPVideo.version){ NV.ver = String(SPVideo.version()); NV.on = true } } catch(e){ NV.on = false }
+  window.SPNative = { onVideo:function(id, ev, a, b){ var f = NV.cb[id]; if(f){ try { f(ev, a, b) } catch(e){ log("vídeo nativo: " + (e && e.message)) } } } };
   // quais formatos de imagem este aparelho abre (alguns TV Box não abrem JPEG)
   var FMT = {};
   (function(){
@@ -166,6 +173,26 @@
   function ls(k, v){ try { if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch(e){ return null } }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c] }) }
   function log(m){ if(window.console) console.log("[player] " + m) }
+  function nvUsable(){ return NV.on && NV.bad < 3 && !G.rot && !(S.cfg && (scr().extras || {}).native === false) }
+  function nvArea(){
+    var r = $("stage").getBoundingClientRect(), k = window.devicePixelRatio || 1;
+    return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)];
+  }
+  function nvStop(){
+    if(NV.id){ NV.cb[NV.id] = null; NV.id = 0; try { SPVideo.stop() } catch(e){} }
+    document.documentElement.classList.remove("nv");
+  }
+  // outro conteúdo entrou na tela: o vídeo nativo sai depois que ele terminou de aparecer
+  function nvRetire(){
+    var id = NV.id; if(!id) return;
+    setTimeout(function(){ if(NV.id === id) nvStop() }, 700);
+  }
+  function nvPrefetch(){
+    if(!NV.on) return;
+    var u = [], add = function(it){ if(it.kind === "video" && u.indexOf(it.url) < 0) u.push(it.url) };
+    S.items.forEach(add); if(S.pend) S.pend.items.forEach(add);
+    try { SPVideo.prefetch(JSON.stringify(u)) } catch(e){}
+  }
   function uuid(){
     if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
     var b = [], i;
@@ -230,6 +257,7 @@
     $("stage").style.height = (RH - bh) + "px";
     var resized = G.RW !== RW || G.RH !== RH || G.rem !== rem;
     G = { W:W, H:H, RW:RW, RH:RH, rem:rem, bh:bh, rot:rot };
+    if(NV.id){ try { var a = nvArea(); SPVideo.area(a[0], a[1], a[2], a[3]) } catch(e){} }
     return resized;
   }
   window.addEventListener("resize", function(){ if(layout()){ resetNews(); T.plan = null; refreshBand() } });
@@ -305,6 +333,7 @@
   }
   function deviceInfo(){
     var info = { ua:navigator.userAgent.slice(0, 200), w:screen.width, h:screen.height, dpr:window.devicePixelRatio || 1 };
+    if(NV.on) info.nv = NV.ver;
     try { if(window.TV && TV.info){ var t = JSON.parse(TV.info()); info.model = t.model; info.android = t.android; info.ip = t.ip; if(t.app) info.app = t.app } } catch(e){}
     return info;
   }
@@ -319,6 +348,7 @@
     if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 240); st.lastErrAt = S.lastErrAt }
     if(S.fallback) st.fallback = S.fallback;
     if(window.performance && performance.memory) st.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+    if(NV.on){ try { st.dev = JSON.parse(SPVideo.info()) } catch(e){} st.nv = nvUsable() ? "on" : "off"; if(NV.bad) st.nvBad = NV.bad }
     return st;
   }
 
@@ -339,6 +369,7 @@
       : rpc("sf_sync", { p_screen:S.id, p_today:parts().ymd, p_info: first ? deviceInfo() : {}, p_status:status() });
     call.then(function(d){
         goOnline();
+        if(!PREVIEW && !S.verChecked){ S.verChecked = true; setTimeout(checkVersion, 4000) }
         var st = d && Date.parse(d.server_time);
         if(st && isFinite(st)) S.skew = st - (t0 + Date.now()) / 2;
         if(d && d.command) command(d.command);
@@ -408,6 +439,7 @@
     for(var i = 0; i < items.length; i++) if(!M.ready[items[i].url] && p.need.indexOf(items[i].url) < 0) p.need.push(items[i].url);
     if(!p.need.length){ commit(p); return }
     S.pend = p;
+    nvPrefetch();
     downloadAll(p);
   }
   function commit(p, restored){
@@ -416,6 +448,7 @@
     S.prog = p.prog; S.key = p.key || keyOf(p.items);
     if(!PREVIEW && !restored) ls("sf_last", JSON.stringify({ cfg:S.cfg, items:p.items, prog:p.prog, key:S.key, skew:S.skew, at:Date.now() }));
     if(!restored) cleanCache(p.items);
+    nvPrefetch();
     if(S.sleeping) return;
     if(!S.cur && !S.card) next();
     // se já há um anúncio passando, a troca acontece no fim dele
@@ -684,7 +717,7 @@
       if(v.parentNode) v.parentNode.removeChild(v);
     }
   }
-  function clearLayer(L){ releaseVideos(L, false); L.innerHTML = ""; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
+  function clearLayer(L){ releaseVideos(L, false); L.innerHTML = ""; L.style.background = ""; L._nv = false; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
   // vídeos travando seguidos: recarrega o player (solta tudo, como um reinício) em vez de
   // deixar a TV Box congelar. No máximo uma vez a cada 15 minutos.
   function videoTrouble(){
@@ -697,6 +730,7 @@
     return true;
   }
   function stop(){
+    nvStop();
     clearTimeout(S.timer); S.timer = null; S.cur = null; S.card = null; S.token++;
     for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; clearLayer(L) }
   }
@@ -738,6 +772,7 @@
     L.appendChild(c);
     hideMsg();
     L.className = "layer on"; old.className = "layer";
+    nvRetire();
     S.layer = 1 - S.layer; S.cur = null; S.card = SPCards.title(spec, S.cfg.content); S.cards++;
     setTimeout(function(){ if(old.className === "layer") clearLayer(old) }, 900);
     var secs = Math.max(6, Math.min(30, +(extrasCfg() || {}).seconds || 10));
@@ -795,6 +830,7 @@
         for(var i = 0; i < kids.length; i++){
           var el = kids[i];
           if(alt && alt !== "skip" && !/\bbdc\b/.test(el.className) && el.tagName === "IMG"){ var a2 = alt; a2.className = el.className; el = a2 }
+          if(/\bnvh\b/.test(el.className)){ g.fillStyle = grd(0, W); g.fillRect(0, 0, W, sh); words("▶ " + (what || "Vídeo"), sh / 2, 16); continue }
           var ok = drawInto(g, el, 0, 0, W, sh);
           if(!ok && !/\bbdc\b/.test(el.className)){
             if(!alt) return "need";
@@ -873,6 +909,7 @@
       if(!alive()) return;
       hideMsg();
       L.className = "layer on"; old.className = "layer";
+      if(!L._nv) nvRetire();
       S.layer = 1 - S.layer; S.cur = item; S.started = Date.now(); S.skips = 0;
       setTimeout(function(){ if(old.className === "layer") clearLayer(old) }, 900);
       preloadNext();
@@ -894,12 +931,50 @@
 
     releaseVideos(old, true);       // um decodificador por vez: o vídeo anterior sai antes do próximo abrir
     clearLayer(L);
-    localBlob(item.url).then(function(blob){
-      if(!alive()) return;
-      var src = item.url;
-      if(blob){ src = URL.createObjectURL(blob); L._url = src }
-      if(item.kind === "video") playVideo(src); else playImage(src, blob);
-    });
+    if(item.kind === "video" && nvUsable()) nativeVideo(); else fromFile();
+    function fromFile(){
+      localBlob(item.url).then(function(blob){
+        if(!alive()) return;
+        var src = item.url;
+        if(blob){ src = URL.createObjectURL(blob); L._url = src }
+        if(item.kind === "video") playVideo(src); else playImage(src, blob);
+      });
+    }
+
+    // vídeo pelo app 2.0: a camada fica transparente e o aparelho desenha o vídeo por baixo
+    function nativeVideo(){
+      if(NV.id) NV.cb[NV.id] = null;
+      var id = ++NV.seq, started = false, a = nvArea();
+      var ph = document.createElement("div"); ph.className = "nvh"; L.appendChild(ph);
+      L.style.background = "transparent"; L._nv = true;
+      NV.id = id;
+      NV.cb[id] = function(ev, ms, why){
+        if(!alive() || NV.cb[id] !== this_cb) return;
+        if(ev === "playing"){
+          if(started) return;
+          started = true;
+          document.documentElement.classList.add("nv");
+          clearTimeout(S.timer);
+          show();
+          var max = ms > 0 ? ms + 5000 : 600000;
+          S.timer = setTimeout(function(){ if(alive()) finish() }, Math.min(max, 600000));
+        } else if(ev === "ended"){
+          if(started) finish();
+        } else if(ev === "error"){
+          NV.cb[id] = null; if(NV.id === id) NV.id = 0;
+          NV.bad++;
+          if(!started){
+            log("vídeo nativo não abriu (" + why + "): usando o do navegador");
+            clearTimeout(S.timer); document.documentElement.classList.remove("nv");
+            clearLayer(L); L._nv = false; fromFile();
+          } else { fail("vídeo travou (" + why + ")", item); finish("stalled") }
+        }
+      };
+      var this_cb = NV.cb[id];
+      try { SPVideo.play(id, item.url, a[0], a[1], a[2], a[3], !!(S.muted || PREVIEW)) }
+      catch(e){ NV.cb[id] = null; NV.id = 0; NV.bad++; clearLayer(L); L._nv = false; fromFile(); return }
+      S.timer = setTimeout(function(){ if(!started && alive() && NV.cb[id]){ NV.cb[id] = null; nvStop(); clearLayer(L); L._nv = false; NV.bad++; fromFile() } }, 30000);
+    }
 
     function playVideo(src){
       var v = document.createElement("video");
@@ -1059,6 +1134,7 @@
   }
   scanCache().then(function(){ sync(true) });
   setInterval(function(){ sync(false) }, SYNC_MS);
+  if(NV.on){ try { SPVideo.ping() } catch(e){} setInterval(function(){ try { SPVideo.ping() } catch(e){} }, 15000) }
   setInterval(function(){ checkHours(); tickClock() }, 15000);
   setInterval(flush, 60000);
   if(!PREVIEW){
@@ -1073,7 +1149,7 @@
   }
   window.addEventListener("online", function(){ sync(false) });
   window.StartPlay = window.ScreenFlowPlayer = { state:S, news:T, media:M, geo:function(){ return G }, sync:sync, next:next,
-    version:VERSION, refreshBand:refreshBand, checkHours:checkHours, parts:parts, queue:qLoad, flush:flush,
+    version:VERSION, nv:NV, refreshBand:refreshBand, checkHours:checkHours, parts:parts, queue:qLoad, flush:flush,
     shot:function(){ S.shotAt = 0; sendShot() }, cards:cardList };
 })();
 </script>
