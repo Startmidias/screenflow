@@ -763,7 +763,8 @@ function saveJson(obj, name) {
 const backupLast = at => at ? `Última cópia baixada: <b>${fmtDT(at)}</b> <span class="sub">(${ago(at)})</span>` : `<span class="warn-txt">Nenhuma cópia baixada ainda.</span>`;
 function storageBox(st) {
   if (!st) return `<div class="sub">Não consegui ler o espaço usado agora.</div>`;
-  const bar = (v, max, label) => { const p = Math.min(100, Math.round(v / max * 100)); return `<div style="margin-bottom:10px"><div class="small">${label}: <b>${fmtMB(v)}</b> de ${fmtMB(max)} <span class="sub">(${p}%)</span></div><div class="pbar ${p > 70 ? "warn" : ""}"><i style="width:${Math.max(1, p)}%"></i></div></div>`; };
+  const cap = b => b >= 1073741824 ? (b / 1073741824).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " GB" : fmtMB(b);
+  const bar = (v, max, label) => { const p = Math.min(100, Math.round(v / max * 100)); return `<div style="margin-bottom:10px"><div class="small">${label}: <b>${fmtMB(v)}</b> de ${cap(max)} <span class="sub">(${p}%)</span></div><div class="pbar ${p > 70 ? "warn" : ""}"><i style="width:${Math.max(1, p)}%"></i></div></div>`; };
   const f = st.files || {};
   return bar(st.db_bytes, st.db_limit, "Banco de dados") + (f.bytes != null ? bar(f.bytes, st.files_limit, `Fotos e vídeos (${nf(f.n)} arquivos)`) : "")
     + `<div class="sub small">${nf(st.plays)} exibições hora a hora${st.plays_oldest ? ` desde ${fmtDT(st.plays_oldest)}` : ""}${st.days_rows ? ` · ${nf(st.days_rows)} totais por dia desde ${fmtDate(st.days_oldest)}` : ""}</div>`;
