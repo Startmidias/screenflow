@@ -118,12 +118,12 @@
 </div>
 
 <script src="config.js"></script>
-<script src="agenda.js?v=3.4.0"></script>
-<script src="cartoes.js?v=3.4.0"></script>
+<script src="agenda.js?v=3.4.1"></script>
+<script src="cartoes.js?v=3.4.1"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.4.0";
+  var VERSION = "3.4.1";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -173,6 +173,31 @@
   function ls(k, v){ try { if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch(e){ return null } }
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c] }) }
   function log(m){ if(window.console) console.log("[player] " + m) }
+  // ---------- um player só por aparelho ----------
+  // Já aconteceu de dois players rodarem juntos no mesmo aparelho (um escondido, de uma
+  // tela antiga do app): dois vídeos ao mesmo tempo travam a TV Box. Os players do mesmo
+  // aparelho combinam pelo armazenamento: o que está na tela fica; o escondido dorme.
+  var LOCK = { pid:uuid(), at:Date.now(), dormant:false };
+  function onScreen(cb){
+    var done = false, t = setTimeout(function(){ if(!done){ done = true; cb(false) } }, 1500);
+    try { requestAnimationFrame(function(){ if(!done){ done = true; clearTimeout(t); cb(true) } }) }
+    catch(e){ done = true; clearTimeout(t); cb(!document.hidden) }
+  }
+  function lockTick(){
+    onScreen(function(vis){
+      var o = null; try { o = JSON.parse(ls("sp_lock") || "null") } catch(e){}
+      var now = Date.now(), other = o && o.pid !== LOCK.pid && Math.abs(now - o.t) < 15000 ? o : null;
+      if(other && ((other.vis && !vis) || (!!other.vis === vis && other.at > LOCK.at))){
+        if(!LOCK.dormant){ LOCK.dormant = true; log("outro player está na tela: este dorme"); stop(); hideMsg() }
+        return;
+      }
+      if(LOCK.dormant){ location.reload(); return }      // o outro saiu: volta do zero
+      ls("sp_lock", JSON.stringify({ pid:LOCK.pid, t:now, vis:vis, at:LOCK.at, v:VERSION }));
+    });
+  }
+  window.addEventListener("pagehide", function(){
+    try { var o = JSON.parse(ls("sp_lock") || "null"); if(o && o.pid === LOCK.pid) localStorage.removeItem("sp_lock") } catch(e){}
+  });
   function nvUsable(){ return NV.on && NV.bad < 3 && !G.rot && !(S.cfg && (scr().extras || {}).native === false) }
   function nvArea(){
     var r = $("stage").getBoundingClientRect(), k = window.devicePixelRatio || 1;
@@ -348,7 +373,7 @@
     if(S.lastErr){ st.lastErr = S.lastErr.slice(0, 240); st.lastErrAt = S.lastErrAt }
     if(S.fallback) st.fallback = S.fallback;
     if(window.performance && performance.memory) st.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
-    if(NV.on){ try { st.dev = JSON.parse(SPVideo.info()) } catch(e){} st.nv = nvUsable() ? "on" : "off"; if(NV.bad) st.nvBad = NV.bad }
+    if(NV.on){ try { st.dev = JSON.parse(SPVideo.info()) } catch(e){} st.nv = nvUsable() ? "on" : "off"; if(NV.bad){ st.nvBad = NV.bad; st.nvErr = NV.err } }
     return st;
   }
 
@@ -362,6 +387,7 @@
   }
 
   function sync(first){
+    if(LOCK.dormant) return;
     if(!BASE || BASE.indexOf("COLE_") === 0){ msg("Falta configurar o site", "Preencha o arquivo config.js."); return }
     var t0 = Date.now();
     var call = PREVIEW
@@ -419,10 +445,16 @@
     }
   }
 
+  function newer(a, b){
+    if(!/^\d+\.\d+\.\d+$/.test(a || "")) return false;
+    var x = a.split("."), y = String(b).split(".");
+    for(var i = 0; i < 3; i++){ var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if(d) return d > 0 }
+    return false;
+  }
   function checkVersion(){
     fetch("version.txt?t=" + Date.now(), { cache:"no-store" })
       .then(function(r){ return r.ok ? r.text() : "" })
-      .then(function(v){ v = (v || "").replace(/\s+/g, ""); if(v && v !== VERSION){ interrupt("player atualizado"); location.reload() } })
+      .then(function(v){ v = (v || "").replace(/\s+/g, ""); if(!LOCK.dormant && newer(v, VERSION)){ interrupt("player atualizado"); location.reload() } })
       ["catch"](function(){});
   }
 
@@ -436,7 +468,7 @@
     var p = { items:items, prog:prog || null, key:key, need:[], done:0, since:Date.now() };
     // primeira vez (ou TV sem nada passando): começa já e baixa enquanto toca
     if(!M.on || S.key == null || !S.items.length){ commit(p); if(M.on) prefetch(items); return }
-    for(var i = 0; i < items.length; i++) if(!M.ready[items[i].url] && p.need.indexOf(items[i].url) < 0) p.need.push(items[i].url);
+    for(var i = 0; i < items.length; i++) if(!M.ready[items[i].url] && p.need.indexOf(items[i].url) < 0 && !(items[i].kind === "video" && nvUsable())) p.need.push(items[i].url);
     if(!p.need.length){ commit(p); return }
     S.pend = p;
     nvPrefetch();
@@ -474,7 +506,7 @@
     })();
   }
   function prefetch(items){
-    var list = items.map(function(it){ return it.url }).filter(function(u){ return !M.ready[u] });
+    var list = items.filter(function(it){ return !(it.kind === "video" && nvUsable()) }).map(function(it){ return it.url }).filter(function(u){ return !M.ready[u] });
     (function step(){ var u = list.shift(); if(u) cachePut(u).then(step, step) })();
   }
   function cachePut(url){
@@ -781,6 +813,7 @@
 
   // ---------- "ver a tela agora": miniatura do que está na tela ----------
   function sendShot(){
+    if(LOCK.dormant) return;
     if(PREVIEW || !S.online || !S.id || !S.cfg || scr().added === false) return;
     if(Date.now() - S.shotAt < 40000) return;
     S.shotAt = Date.now();
@@ -891,6 +924,7 @@
 
   function next(){
     clearTimeout(S.timer);
+    if(LOCK.dormant) return;
     S.card = null;
     if(S.sleeping) return;
     if(S.reloadDue && !PREVIEW){ interrupt("recarga diária"); location.reload(); return }
@@ -962,7 +996,7 @@
           if(started) finish();
         } else if(ev === "error"){
           NV.cb[id] = null; if(NV.id === id) NV.id = 0;
-          NV.bad++;
+          NV.bad++; NV.err = String(why || "").slice(0, 120);
           if(!started){
             log("vídeo nativo não abriu (" + why + "): usando o do navegador");
             clearTimeout(S.timer); document.documentElement.classList.remove("nv");
@@ -1132,6 +1166,7 @@
   if(!PREVIEW && "serviceWorker" in navigator && location.protocol === "https:"){
     try { navigator.serviceWorker.register("sw.js")["catch"](function(){}) } catch(e){}
   }
+  if(!PREVIEW){ lockTick(); setInterval(lockTick, 5000) }
   scanCache().then(function(){ sync(true) });
   setInterval(function(){ sync(false) }, SYNC_MS);
   if(NV.on){ try { SPVideo.ping() } catch(e){} setInterval(function(){ try { SPVideo.ping() } catch(e){} }, 15000) }

@@ -51,7 +51,7 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
         MediaPlayer.OnCompletionListener, MediaPlayer.OnErrorListener, MediaPlayer.OnInfoListener,
         MediaPlayer.OnVideoSizeChangedListener {
 
-    public static final String VERSION = "2.0.0";
+    public static final String VERSION = "2.0.1";
     static final String TAG = "StartPlayNV";
     static final int PING_LIMIT_MS = 150000;      // página sem dar sinal por 2,5 min: recarrega
     static final int STALL_MS = 12000;            // vídeo parado no mesmo ponto por 12 s: travou
@@ -82,6 +82,9 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
     boolean resumed;
 
     final LinkedList<String> queue = new LinkedList<String>();
+    String prevLife = "";        // como estava o aparelho no último sinal antes de desligar/reiniciar
+    int beats;
+    String nowUrl = "";
     Thread loader;
     String loading;
 
@@ -89,6 +92,13 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
     // ligação com o app (chamado pela MainActivity)
     // ------------------------------------------------------------------
     public static void attach(Activity a, FrameLayout root, WebView player) {
+        // tela antiga do app (o Android recriou a tela): solta o vídeo e desliga a página dela,
+        // senão dois players tocam ao mesmo tempo e a TV Box trava
+        NativeVideo old = inst;
+        if (old != null && old.web != player) {
+            try { old.ui.removeCallbacks(old.watch); old.ui.removeCallbacks(old.alarm); old.dropPlayer(); old.cur = 0; } catch (Throwable t) { Log.e(TAG, "old", t); }
+            try { old.web.loadUrl("about:blank"); } catch (Throwable t) { Log.e(TAG, "old web", t); }
+        }
         try {
             inst = new NativeVideo(a, root, player);
         } catch (Throwable t) {
@@ -111,6 +121,7 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
         File d = new File(a.getFilesDir(), "videos");
         if (!d.isDirectory()) d.mkdirs();
         dir = d;
+        prevLife = readFile(new File(a.getFilesDir(), "vida.json"));
         web.addJavascriptInterface(new Js(this), "SPVideo");
         ui.postDelayed(watch, WATCH_MS);
         resumed = true;
@@ -174,7 +185,7 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
     void doPlay(int id, String url, int x, int y, int w, int h, boolean mute) {
         try {
             ensureSurface();
-            cur = id; sx = x; sy = y; sw = w; sh = h; muted = mute;
+            cur = id; sx = x; sy = y; sw = w; sh = h; muted = mute; nowUrl = url;
             prepared = false; started = false; rendered = false; vw = 0; vh = 0;
             lastPos = -1; lastMove = SystemClock.elapsedRealtime(); openAt = lastMove;
             String src = local(url);
@@ -328,6 +339,7 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
                     doStop();
                     web.reload();
                 }
+                if (++beats % 5 == 0) life();
             } catch (Throwable t) { Log.e(TAG, "watch", t); }
             ui.postDelayed(this, WATCH_MS);
         }
@@ -445,25 +457,28 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
         File out = new File(dir, key(url)), part = new File(dir, key(url) + ".part");
         HttpURLConnection c = null;
         try {
+            long have = part.isFile() ? part.length() : 0;
             c = (HttpURLConnection) new URL(url).openConnection();
             c.setConnectTimeout(15000);
             c.setReadTimeout(30000);
             c.setInstanceFollowRedirects(true);
-            if (c.getResponseCode() != 200) return false;
+            if (have > 0) c.setRequestProperty("Range", "bytes=" + have + "-");
+            int code = c.getResponseCode();
+            if (code != 200 && code != 206) return false;
+            boolean append = code == 206 && have > 0;      // continua o que já tinha baixado
             InputStream in = c.getInputStream();
-            OutputStream os = new FileOutputStream(part);
+            OutputStream os = new FileOutputStream(part, append);
             byte[] buf = new byte[65536];
             int n;
             try {
                 while ((n = in.read(buf)) > 0) { os.write(buf, 0, n); if (n < buf.length) SystemClock.sleep(2); }
             } finally { os.close(); in.close(); }
             long want = c.getContentLength();
-            if (want > 0 && part.length() != want) { part.delete(); return false; }
+            if (want > 0 && part.length() != want + (append ? have : 0)) return false;   // incompleto: continua na próxima
             return part.renameTo(out);
         } catch (Throwable t) {
             Log.w(TAG, "download " + url + ": " + t);
-            part.delete();
-            return false;
+            return false;                          // o pedaço baixado fica para continuar depois
         } finally {
             if (c != null) c.disconnect();
         }
@@ -472,6 +487,8 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
     // ------------------------------------------------------------------
     // saúde do aparelho
     // ------------------------------------------------------------------
+    JSONObject devInfo;
+
     String info() {
         try {
             JSONObject o = new JSONObject();
@@ -488,6 +505,11 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
                 o.put("lowMem", mi.lowMemory);
             }
             o.put("reloads", reloads);
+            o.put("memAvailMB", meminfo("MemAvailable:"));
+            o.put("load", firstLine("/proc/loadavg"));
+            if (prevLife.length() > 0) o.put("prev", new JSONObject(prevLife));
+            if (devInfo == null) devInfo = device();
+            o.put("hw", devInfo);
             File[] fs = dir.listFiles();
             long bytes = 0; int n = 0;
             if (fs != null) for (File f : fs) if (f.getName().endsWith(".mp4")) { bytes += f.length(); n++; }
@@ -499,12 +521,97 @@ public class NativeVideo implements SurfaceHolder.Callback, MediaPlayer.OnPrepar
         }
     }
 
+    /** a cada 10 s: tempo ligado, o que toca, memória e temperatura (lido no próximo início) */
+    void life() {
+        try {
+            JSONObject o = new JSONObject();
+            o.put("up", SystemClock.elapsedRealtime() / 1000);
+            o.put("at", System.currentTimeMillis() / 1000);
+            o.put("video", cur != 0 ? nowUrl.substring(nowUrl.lastIndexOf('/') + 1) : "");
+            o.put("temp", temperature());
+            o.put("memAvailMB", meminfo("MemAvailable:"));
+            o.put("load", firstLine("/proc/loadavg"));
+            File f = new File(act.getFilesDir(), "vida.json"), t = new File(act.getFilesDir(), "vida.tmp");
+            FileOutputStream os = new FileOutputStream(t);
+            try { os.write(o.toString().getBytes("UTF-8")); os.getFD().sync(); } finally { os.close(); }
+            t.renameTo(f);
+        } catch (Throwable t) { Log.e(TAG, "life", t); }
+    }
+
+    static String readFile(File f) {
+        if (!f.isFile()) return "";
+        BufferedReader r = null;
+        try {
+            r = new BufferedReader(new FileReader(f));
+            StringBuilder b = new StringBuilder(); String l;
+            while ((l = r.readLine()) != null && b.length() < 4000) b.append(l);
+            return b.toString();
+        } catch (Throwable t) { return ""; }
+        finally { try { if (r != null) r.close(); } catch (Throwable t) { /* nada */ } }
+    }
+
+    static String firstLine(String path) {
+        BufferedReader r = null;
+        try { r = new BufferedReader(new FileReader(path)); String l = r.readLine(); return l == null ? "" : l.trim(); }
+        catch (Throwable t) { return ""; }
+        finally { try { if (r != null) r.close(); } catch (Throwable t) { /* nada */ } }
+    }
+
+    /** valor (MB) de uma linha do /proc/meminfo — a memória de verdade, mesmo em aparelho que mostra números falsos */
+    static long meminfo(String key) {
+        BufferedReader r = null;
+        try {
+            r = new BufferedReader(new FileReader("/proc/meminfo"));
+            String l;
+            while ((l = r.readLine()) != null) if (l.startsWith(key)) {
+                String[] p = l.substring(key.length()).trim().split("\\s+");
+                return Long.parseLong(p[0]) / 1024;
+            }
+        } catch (Throwable t) { /* nada */ }
+        finally { try { if (r != null) r.close(); } catch (Throwable t) { /* nada */ } }
+        return -1;
+    }
+
+    static String prop(String name) {
+        try {
+            Process pr = Runtime.getRuntime().exec(new String[] { "getprop", name });
+            BufferedReader r = new BufferedReader(new java.io.InputStreamReader(pr.getInputStream()));
+            String l = r.readLine(); r.close(); pr.destroy();
+            return l == null ? "" : l.trim();
+        } catch (Throwable t) { return ""; }
+    }
+
+    /** por que o aparelho reiniciou e o que ele é de verdade (chip, Android real) */
+    static JSONObject device() {
+        JSONObject o = new JSONObject();
+        String[] keys = { "sys.boot.reason", "ro.boot.bootreason", "persist.sys.boot.reason", "ro.boot.reboot_mode", "ro.boot.reboot_reason",
+                          "ro.board.platform", "ro.hardware", "ro.product.board", "ro.build.version.release", "ro.build.version.sdk", "ro.product.cpu.abi" };
+        for (String k : keys) {
+            String v = prop(k);
+            try { if (v.length() > 0) o.put(k, v.length() > 60 ? v.substring(0, 60) : v); } catch (Throwable t) { /* nada */ }
+        }
+        try {
+            String c = firstLine("/proc/cmdline");
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\S*(?:boot_?reason|reboot_mode|bootmode)\\S*)").matcher(c);
+            StringBuilder b = new StringBuilder();
+            while (m.find() && b.length() < 160) b.append(m.group(1)).append(' ');
+            if (b.length() > 0) o.put("cmdline", b.toString().trim());
+            o.put("memRealMB", meminfo("MemTotal:"));
+            android.os.StatFs st = new android.os.StatFs("/data");
+            o.put("dataFreeMB", st.getAvailableBytes() / 1048576);
+            o.put("dataMB", st.getTotalBytes() / 1048576);
+        } catch (Throwable t) { /* nada */ }
+        return o;
+    }
+
     /** maior temperatura informada pelo aparelho, em °C (0 se não informar) */
     static int temperature() {
         int best = 0;
-        for (int i = 0; i < 10; i++) {
-            File f = new File("/sys/class/thermal/thermal_zone" + i + "/temp");
-            if (!f.exists()) { if (i > 2) break; else continue; }
+        String[] extra = { "/sys/devices/virtual/thermal/thermal_zone0/temp", "/sys/class/hwmon/hwmon0/temp1_input",
+                           "/sys/devices/system/cpu/cpu0/cpufreq/cpu_temp", "/sys/class/thermal/thermal_zone0/temp" };
+        for (int i = 0; i < 10 + extra.length; i++) {
+            File f = i < extra.length ? new File(extra[i]) : new File("/sys/class/thermal/thermal_zone" + (i - extra.length) + "/temp");
+            if (!f.exists()) continue;
             BufferedReader r = null;
             try {
                 r = new BufferedReader(new FileReader(f));

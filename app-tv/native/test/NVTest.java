@@ -35,8 +35,14 @@ public class NVTest {
         byte[] video = new byte[300000]; for (int i = 0; i < video.length; i++) video[i] = (byte) i;
         HttpServer http = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         final byte[] body = video;
-        http.createContext("/", ex -> { ex.sendResponseHeaders(ex.getRequestURI().getPath().contains("404") ? 404 : 200, ex.getRequestURI().getPath().contains("404") ? -1 : body.length);
-            if (!ex.getRequestURI().getPath().contains("404")) { OutputStream os = ex.getResponseBody(); os.write(body); os.close(); } ex.close(); });
+        final java.util.List<String> ranges = new java.util.ArrayList<String>();
+        http.createContext("/", ex -> {
+            if (ex.getRequestURI().getPath().contains("404")) { ex.sendResponseHeaders(404, -1); ex.close(); return; }
+            String r = ex.getRequestHeaders().getFirst("Range");
+            int from = 0;
+            if (r != null) { ranges.add(r); from = Integer.parseInt(r.replaceAll("\\D*(\\d+)-.*", "$1")); ex.getResponseHeaders().add("Content-Range", "bytes " + from + "-" + (body.length - 1) + "/" + body.length); }
+            ex.sendResponseHeaders(r != null ? 206 : 200, body.length - from);
+            OutputStream os = ex.getResponseBody(); os.write(body, from, body.length - from); os.close(); ex.close(); });
         http.start();
         String base = "http://127.0.0.1:" + http.getAddress().getPort() + "/";
 
@@ -49,7 +55,7 @@ public class NVTest {
         ok("sem vídeo, nada muda na tela (superfície só no 1º vídeo)", n != null && root.kids.size() == 1 && player.bg == 0xff000000, root.kids.size());
         ok("ponte SPVideo disponível para a página", "SPVideo".equals(player.ifaceName), player.ifaceName);
         NativeVideo.Js js = (NativeVideo.Js) player.iface;
-        ok("versão 2.0.0", "2.0.0".equals(js.version()), js.version());
+        ok("versão 2.0.1", "2.0.1".equals(js.version()), js.version());
         Handler.pump(10);
         ok("vigia do app armado (reabre se o app cair)", alarm.sets >= 1 && alarm.type == AlarmManager.ELAPSED_REALTIME && alarm.at > SystemClock.now, alarm.sets);
 
@@ -143,7 +149,30 @@ public class NVTest {
 
         System.out.println("8) Saúde do aparelho");
         String info = js.info();
-        ok("informa versão, tempo ligado e memória", info.contains("\"nv\":\"2.0.0\"") && info.contains("\"uptime\":") && info.contains("\"memFreeMB\":300"), info);
+        ok("informa versão, tempo ligado e memória", info.contains("\"nv\":\"2.0.1\"") && info.contains("\"uptime\":") && info.contains("\"memFreeMB\":300"), info);
+        ok("informa a memória de verdade (/proc/meminfo) e o espaço livre", info.contains("\"memRealMB\":") && info.contains("\"dataFreeMB\":") && !info.contains("\"memRealMB\":-1"), null);
+        File vida = new File(files, "vida.json");
+        ok("guarda o último sinal de vida a cada 10 s (sobrevive ao reinício)", vida.isFile() && NativeVideo.readFile(vida).contains("\"up\":"), NativeVideo.readFile(vida));
+
+        System.out.println("9) Download que continua de onde parou");
+        String u9 = base + "parcial.mp4";
+        File part = new File(new File(files, "videos"), NativeVideo.key(u9) + ".part");
+        java.io.FileOutputStream fo = new java.io.FileOutputStream(part); fo.write(video, 0, 100000); fo.close();
+        js.prefetch("[\"" + u9 + "\"]");
+        for (int i = 0; i < 150 && !js.has(u9); i++) Thread.sleep(20);
+        byte[] got = js.has(u9) ? Files.readAllBytes(new File(n.local(u9)).toPath()) : new byte[0];
+        ok("pede só o que falta (Range) e o arquivo fica inteiro", ranges.contains("bytes=100000-") && java.util.Arrays.equals(got, video), ranges + " " + got.length);
+
+        System.out.println("10) O Android recriou a tela do app");
+        MediaPlayer before2 = MediaPlayer.last;
+        FrameLayout root2 = new FrameLayout(act);
+        WebView player2 = new WebView(act); player2.bg = 0xff000000; root2.addView(player2, 0, null);
+        NativeVideo.attach(act, root2, player2);
+        ok("a página da tela antiga é desligada (não fica tocando escondida)", player.loads.contains("about:blank"), player.loads);
+        ok("o vídeo da tela antiga é solto", n.mp == null && n.cur == 0, null);
+        ok("a tela nova assume", NativeVideo.inst != n && NativeVideo.inst.web == player2, null);
+        String info2 = ((NativeVideo.Js) player2.iface).info();
+        ok("lê como o aparelho estava antes (último sinal de vida)", info2.contains("\"prev\":{\"up\":"), info2);
 
         http.stop(0);
         System.out.println("\n" + pass + " de " + (pass + fail) + " verificações passaram");

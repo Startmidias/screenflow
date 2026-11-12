@@ -5,6 +5,8 @@ public class WebView extends android.view.ViewGroup {
   public WebView(android.content.Context c) { super(c); }
   public void addJavascriptInterface(Object o, String n) { iface = o; ifaceName = n; }
   public void evaluateJavascript(String s, ValueCallback<String> cb) { js.add(s); }
+  public java.util.List<String> loads = new java.util.ArrayList<String>();
+  public void loadUrl(String u) { loads.add(u); }
   public void reload() { reloads++; }
   public String getUrl() { return url; }
 }
