@@ -42,6 +42,11 @@
   #house .tel{display:inline-block;margin-top:2rem;padding:.6rem 1.6rem;border-radius:3rem;background:#fff;color:#1D02A9;
     font-size:2.1rem;font-weight:800;letter-spacing:.02em}
   #house p{margin:1.4rem auto 0;text-align:center}
+  #house .row{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;margin-top:2rem}
+  #house .row .tel{margin:0 1rem}
+  #house .qr{margin:.6rem 1rem 0;background:#fff;padding:.35rem .35rem .3rem;border-radius:.8rem;text-align:center}
+  #house .qr canvas{display:block;width:8.5rem;height:8.5rem;margin:0 auto}
+  #house .qr span{display:block;color:#1D02A9;font-size:.78rem;font-weight:700;margin-top:.15rem}
 
   /* rodapé: notícias e chamada comercial se revezam na mesma área */
   #band{position:absolute;left:0;bottom:0;width:100%;height:2.6rem;display:none;background:#07070C;overflow:hidden}
@@ -88,7 +93,7 @@
       <img class="logo" src="logo.png" alt="START PLAY">
       <div class="k">Sua marca nesta tela</div>
       <div class="big">Anuncie aqui</div>
-      <div class="tel" id="house-tel"></div>
+      <div class="row"><div class="tel" id="house-tel"></div><div class="qr" id="house-qr" style="display:none"></div></div>
       <p id="house-p"></p>
     </div></div>
     <div class="full" id="msg"><div class="box">
@@ -110,12 +115,12 @@
 </div>
 
 <script src="config.js"></script>
-<script src="agenda.js?v=3.2.1"></script>
-<script src="cartoes.js?v=3.2.1"></script>
+<script src="agenda.js?v=3.3.0"></script>
+<script src="cartoes.js?v=3.3.0"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.2.1";
+  var VERSION = "3.3.0";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -248,6 +253,32 @@
     $("house-tel").textContent = "WhatsApp " + (st.phone || "(65) 99328-8233");
     $("house-p").textContent = PREVIEW && !S.items.length ? "Nenhum anúncio no ar para esta tela agora." : (st.company || "START PLAY") + " · mídia indoor";
     $("msg").className = "full"; $("house").className = "full on";
+    houseQr(st);
+  }
+  // QR code que abre o WhatsApp da START PLAY já dizendo de qual TV a pessoa veio
+  var qrLib = null, qrUrl = "";
+  function houseQr(st){
+    var d = String(st.phone || "").replace(/\D/g, ""), box = $("house-qr");
+    if(d.length >= 10 && d.length <= 11) d = "55" + d;
+    if(d.length < 12 || PREVIEW && !S.cfg){ box.style.display = "none"; return }
+    var sc = scr(), where = (sc.unit ? sc.unit + " · " : "") + (S.name || sc.name || "");
+    var url = "https://wa.me/" + d + "?text=" + encodeURIComponent("Olá! Vi a TV da " + (st.company || "START PLAY") + (where ? " em " + where : "") + " e quero anunciar.");
+    if(url === qrUrl && box.firstChild){ box.style.display = ""; return }
+    qrLib = qrLib || new Promise(function(res, rej){
+      var t = document.createElement("script"); t.src = "qrcode.js?v=" + VERSION; t.onload = res;
+      t.onerror = function(){ qrLib = null; rej(new Error("qr")) };
+      document.head.appendChild(t);
+    });
+    qrLib.then(function(){
+      var q = window.qrcode(0, "M"); q.addData(url); q.make();
+      var n = q.getModuleCount(), quiet = 2, px = Math.max(2, Math.round(G.rem * 8.5 * Math.min(2, window.devicePixelRatio || 1) / (n + 2 * quiet)));
+      var c = document.createElement("canvas"); c.width = c.height = (n + 2 * quiet) * px;
+      var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.fillStyle = "#000";
+      for(var r = 0; r < n; r++) for(var k = 0; k < n; k++) if(q.isDark(r, k)) g.fillRect((k + quiet) * px, (r + quiet) * px, px, px);
+      var cap = document.createElement("span"); cap.textContent = "Aponte a câmera do celular";
+      box.innerHTML = ""; box.appendChild(c); box.appendChild(cap); box.style.display = "";
+      qrUrl = url;
+    })["catch"](function(){ box.style.display = "none" });
   }
   function fail(what, item){
     S.err++; S.lastErr = what + (item ? ": " + item.title : ""); S.lastErrAt = new Date().toISOString();

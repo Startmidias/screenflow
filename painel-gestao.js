@@ -63,6 +63,7 @@ PAGES.clientes = async function pageClients(arg) {
         <div class="meta"><span class="chip ${cc}">${cs}</span>${f.overdue ? `<span class="chip err">${money(f.overdue)} em atraso</span>` : f.open ? `<span class="chip">${money(f.open)} a receber</span>` : f.ps.length ? `<span class="chip ok">em dia</span>` : ""}
           <span class="chip ${ads.length > c.ads_qty ? "warn" : ""}">${ads.length} de ${c.ads_qty} anúncio(s)</span></div></div>
         <div class="acts"><button class="btn ghost sm" data-a="rep">${icon("doc")} Relatório e PDF</button>
+          <button class="icon" data-a="link" title="Link do anunciante (exibições ao vivo)">${icon("eye")}</button>
           <button class="icon" data-a="fin" title="Financeiro do cliente">${icon("money")}</button>
           ${c.phone ? `<a class="icon" target="_blank" rel="noopener" href="${esc(waLink(c.phone, `Olá ${c.contact || c.name}! Aqui é da START PLAY.`))}" title="WhatsApp">${icon("wa")}</a>` : ""}
           <button class="icon" data-a="edit" title="Editar">${icon("edit")}</button><button class="icon" data-a="del" title="Apagar">${icon("trash")}</button></div></div>`;
@@ -75,6 +76,7 @@ PAGES.clientes = async function pageClients(arg) {
     const c = clientById(b.closest("[data-id]").dataset.id);
     if (b.dataset.a === "edit") clientForm(c);
     else if (b.dataset.a === "fin") statementModal(c);
+    else if (b.dataset.a === "link") portalModal(c);
     else if (b.dataset.a === "rep") { state.report.client = c.id; state.report.media = ""; location.hash = "relatorio"; }
     else if (b.dataset.a === "del") confirmBox(`Apagar "${c.name}"?`, "As parcelas e os recebimentos deste cliente também são apagados. Os anúncios continuam, sem cliente.", "Apagar", async () => {
       const { error } = await sb.from("clients").delete().eq("id", c.id); if (error) throw error;
@@ -303,7 +305,9 @@ PAGES.relatorio = async function pageReport(arg) {
     data = { a, b, R, rows, daily, log, prog, ctr, by, bs, tot, client, args };
     const partial = b > today() ? " até hoje" : "";
     const pct = (v, base) => base ? ` · ${Math.round(v / base * 100)}%` : "";
+    const cut = addDays(today(), -(state.settings.plays_keep_days || 90));
     $("#rep").innerHTML = `
+      ${a < cut ? `<div class="info-box" style="margin-bottom:10px">Antes de ${fmtDate(cut)} as exibições ficam guardadas como totais por dia: os números abaixo somam o período todo, mas o registro hora a hora (e a planilha) começa em ${fmtDate(cut)}. O prazo fica em Ajustes → Espaço.</div>` : ""}
       <div class="sub" style="margin-bottom:10px">${fmtDate(a)} a ${fmtDate(b)}${client ? " · " + esc(client.name) : ""}${R.screen ? " · " + esc(screenName(R.screen)) : ""}${R.media ? " · " + esc((state.media.find(m => m.id === R.media) || {}).title || "") : ""}</div>
       <div class="kpis">
         <div class="card kpi"><div class="k">Contratado${partial}</div><div class="v">${ctr == null ? "—" : nf(ctr)}</div><div class="d">${ctr == null ? "cadastre inserções/dia no cliente" : "inserções pelo contrato"}</div></div>
@@ -532,14 +536,15 @@ const KIND_TXT = { down: "TV sem sinal", reminder: "Lembrete", back: "TV voltou"
 const CONTENT_TXT = k => k === "clima" ? "Clima" : k === "cotacao" ? "Cotação" : k.startsWith("jogos:") ? "Jogos · " + ((LIGAS_OP.find(x => x[0] === k.slice(6)) || [])[1] || k.slice(6))
   : k.startsWith("tabela:") ? "Classificação · " + ((LIGAS_OP.find(x => x[0] === k.slice(7)) || [])[1] || k.slice(7)) : k;
 
-PAGES.ajustes = async function pageSettings() {
+PAGES.ajustes = async function pageSettings(arg) {
   loading();
-  let al = {}, hist = [], cst = {};
+  let al = {}, hist = [], cst = {}, stor = null, bks = [];
   try {
     await need("settings", "sources", "version");
     al = (await q("alert_settings").catch(() => [{}]))[0] || {};
     hist = await sb.rpc("sf_alert_history", { p_limit: 15 }).then(r => r.data || []).catch(() => []);
     cst = await sb.rpc("sf_content_status", { p_refresh: false }).then(r => r.data || {}).catch(() => ({}));
+    [stor, bks] = await Promise.all([sb.rpc("sf_storage_status").then(r => r.data || null, () => null), sb.rpc("sf_backup_list").then(r => r.data || [], () => [])]);
   } catch (e) { pageError(e); return; }
   if (state.tab !== "ajustes") return;
   const s = state.settings, main = $("#main");
@@ -593,7 +598,7 @@ PAGES.ajustes = async function pageSettings() {
         <div id="ct-err"></div><button class="btn" type="submit" id="csv" style="margin-top:8px">Salvar</button></div>
       <div class="box"><h3>Situação das fontes</h3><div id="ct-st">${contentStatus(cst)}</div>
         <button class="btn ghost sm" type="button" id="crf" style="margin-top:10px">${icon("reload")} Atualizar agora</button>
-        <div class="hint">Clima: MET Norway (licença CC BY 4.0) · cotação: AwesomeAPI · futebol: placar público da ESPN. Se uma fonte falhar, o cartão dela some sozinho até voltar.</div></div>
+        <div class="hint">Clima: MET Norway (licença CC BY 4.0) · cotação: AwesomeAPI (reserva: Banco Central Europeu) · futebol: placar público da ESPN. Se uma fonte falhar, o cartão dela some sozinho até voltar.</div></div>
     </form>
     <h2 class="sec">Fontes de notícias <span class="sub">(lista fixa; só entra na TV o que passou na validação)</span></h2>
     <div class="filters"><button class="btn ghost sm" id="vall">Validar todas agora</button><span class="sub small">Cada portal é consultado pelo servidor da START PLAY a cada 10 minutos e o resultado é dividido entre todas as TVs.</span></div>
@@ -604,6 +609,19 @@ PAGES.ajustes = async function pageSettings() {
         <td><label class="switch"><input type="checkbox" data-en="${x.id}" ${x.enabled ? "checked" : ""} ${v.ok ? "" : "disabled"}><span class="sl"></span></label></td>
         <td class="num"><button class="btn ghost sm" data-val="${x.id}">Validar</button></td></tr>`; }).join("")).join("")}
     </tbody></table></div>
+    <h2 class="sec" id="bk-sec">Espaço e cópias de segurança</h2>
+    <div class="grid2c">
+      <div class="box"><h3>Espaço usado (plano gratuito do Supabase)</h3><div id="st-box">${storageBox(stor)}</div>
+        <div class="field" style="margin:12px 0 0"><label for="kp">Registro hora a hora das exibições</label>
+          <select class="in" id="kp">${KEEP_OP.map(([d, t]) => `<option value="${d}" ${(s.plays_keep_days || 90) === d ? "selected" : ""}>${t}</option>`).join("")}</select>
+          <div class="hint">Depois desse prazo, cada dia vira um total por tela e anúncio: relatório, comprovante e link do anunciante continuam somando tudo; só a lista hora a hora fica limitada. Cada TV usa cerca de 1,4 MB por dia de registro.</div></div></div>
+      <div class="box"><h3>Cópias de segurança</h3>
+        <div id="bk-last">${backupLast(s.backup_at)}</div>
+        <button class="btn" type="button" id="bkf" style="margin-top:10px">Baixar cópia completa</button>
+        <div class="hint">Um arquivo com clientes, contratos, parcelas, recebimentos, anúncios, telas, ajustes e os totais de exibição de todo o período. Guarde no Google Drive ou no computador, uma vez por mês: o plano gratuito do Supabase não faz backup.</div>
+        <div class="lbl" style="margin-top:14px">Cópias automáticas (uma por dia, as 14 últimas)</div>
+        <div class="bklist">${bks.length ? bks.map(b => `<div class="bk"><span>${fmtDT(b.at)} <span class="sub small">· ${fmtMB(b.bytes || 0)}</span></span><button class="btn ghost sm" type="button" data-bk="${b.id}">Baixar</button></div>`).join("") : `<div class="sub small">A primeira sai em até 1 hora.</div>`}</div></div>
+    </div>
     <h2 class="sec">App da TV</h2>
     <div class="card pad"><div>Player atual: <b>${esc(state.latest || "?")}</b> · as TVs atualizam sozinhas em até 5 minutos.</div>
       <div class="sub" style="margin-top:6px">Instalar ou atualizar o app no TV Box: no navegador do aparelho, abra <span class="pill">${esc(siteHost())}/startplay.apk</span>. Ao abrir, a TV mostra o <b>código de pareamento</b>; pareie em Telas → Adicionar tela.</div></div>`;
@@ -704,6 +722,76 @@ PAGES.ajustes = async function pageSettings() {
     b.disabled = false; b.innerHTML = `${icon("reload")} Atualizar agora`;
   });
   $("#vall").addEventListener("click", () => runVal("todas", $("#vall")));
+
+  // espaço e cópias de segurança
+  $("#kp").addEventListener("change", async e => {
+    const v = +e.target.value;
+    const { error } = await sb.from("settings").update({ plays_keep_days: v }).eq("id", 1);
+    if (error) { toast(friendly(error), 5000); return; }
+    await need("settings"); toast(`Registro hora a hora guardado por ${KEEP_OP.find(x => x[0] === v)[1]}. O resto vira totais por dia.`, 5000);
+  });
+  $("#bkf").addEventListener("click", async () => {
+    const b = $("#bkf"); b.disabled = true; b.innerHTML = `<span class="spin"></span> Preparando…`;
+    try {
+      const { data, error } = await sb.rpc("sf_backup_full"); if (error) throw error;
+      saveJson(data, `START PLAY - copia de seguranca - ${today()}.json`);
+      await need("settings"); if ($("#bk-last")) $("#bk-last").innerHTML = backupLast(state.settings.backup_at);
+      toast("Cópia baixada. Guarde o arquivo no Google Drive ou no computador.", 5000);
+    } catch (ex) { toast(friendly(ex), 5000); }
+    b.disabled = false; b.textContent = "Baixar cópia completa";
+  });
+  $$("[data-bk]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true;
+    const { data, error } = await sb.rpc("sf_backup_get", { p_id: +b.dataset.bk });
+    b.disabled = false;
+    if (error || !data) { toast(friendly(error || new Error("Cópia não encontrada.")), 5000); return; }
+    saveJson(data, `START PLAY - copia automatica - ${String(data.gerada_em || "").slice(0, 10)}.json`);
+  }));
+  if (arg === "copia") $("#bk-sec").scrollIntoView({ block: "start" });
 };
+
+// ---------------------------------------------------------------------------
+// espaço, cópias de segurança e link do anunciante
+// ---------------------------------------------------------------------------
+const KEEP_OP = [[90, "90 dias"], [180, "6 meses"], [365, "1 ano"], [730, "2 anos"]];
+function saveJson(obj, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 1)], { type: "application/json" }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const backupLast = at => at ? `Última cópia baixada: <b>${fmtDT(at)}</b> <span class="sub">(${ago(at)})</span>` : `<span class="warn-txt">Nenhuma cópia baixada ainda.</span>`;
+function storageBox(st) {
+  if (!st) return `<div class="sub">Não consegui ler o espaço usado agora.</div>`;
+  const bar = (v, max, label) => { const p = Math.min(100, Math.round(v / max * 100)); return `<div style="margin-bottom:10px"><div class="small">${label}: <b>${fmtMB(v)}</b> de ${fmtMB(max)} <span class="sub">(${p}%)</span></div><div class="pbar ${p > 70 ? "warn" : ""}"><i style="width:${Math.max(1, p)}%"></i></div></div>`; };
+  const f = st.files || {};
+  return bar(st.db_bytes, st.db_limit, "Banco de dados") + (f.bytes != null ? bar(f.bytes, st.files_limit, `Fotos e vídeos (${nf(f.n)} arquivos)`) : "")
+    + `<div class="sub small">${nf(st.plays)} exibições hora a hora${st.plays_oldest ? ` desde ${fmtDT(st.plays_oldest)}` : ""}${st.days_rows ? ` · ${nf(st.days_rows)} totais por dia desde ${fmtDate(st.days_oldest)}` : ""}</div>`;
+}
+const portalUrl = t => new URL("anunciante.html#" + t, location.href).href;
+async function portalModal(c, action = "get") {
+  modal(`<h2>Link do anunciante · ${esc(c.name)}</h2><div id="pl"><div class="empty"><span class="spin dark"></span></div></div>
+    <div class="modal-foot"><button class="btn ghost" data-close>Fechar</button></div>`, "mid");
+  const { data, error } = await sb.rpc("sf_portal_link", { p_client: c.id, p_action: action });
+  if (!$("#pl")) return;
+  if (error) { $("#pl").innerHTML = `<div class="err-box">${esc(friendly(error))}</div>`; return; }
+  if (!data) { $("#pl").innerHTML = `<div class="ok-box">Link desligado. Quem tinha o endereço não vê mais nada.</div><button class="btn" id="plg" style="margin-top:12px">Criar um link novo</button>`;
+    $("#plg").addEventListener("click", () => portalModal(c, "new")); return; }
+  const url = portalUrl(data), st = state.settings;
+  const msg = `Olá ${c.contact || c.name}! Aqui é da ${st.company || "START PLAY"}. Pelo link abaixo você acompanha, a qualquer hora, quantas vezes o seu anúncio passou nas nossas TVs, em quais telas e até uma foto da tela mostrando a sua arte:\n${url}`;
+  $("#pl").innerHTML = `<p class="sub" style="margin:0 0 12px">Uma página só deste cliente, sem senha: exibições dos últimos 30 dias, anúncios no ar, telas e fotos da tela mostrando a arte dele. Atualiza sozinha.</p>
+    <div class="field"><label for="plu">Endereço</label><input class="in" id="plu" readonly value="${esc(url)}"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="button" id="plc">Copiar</button>
+      ${c.phone ? `<a class="btn ghost" target="_blank" rel="noopener" href="${esc(waLink(c.phone, msg))}">${icon("wa")} Mandar no WhatsApp</a>` : ""}
+      <a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">${icon("eye")} Abrir</a></div>
+    <div class="hint" style="margin-top:14px">Quem tiver o endereço vê a página. Se ele cair em mãos erradas: <a href="#" id="pln">gerar um novo</a> (o antigo para de funcionar) ou <a href="#" id="plo">desligar</a>.</div>`;
+  $("#plu").addEventListener("focus", e => e.target.select());
+  $("#plc").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(url); toast("Link copiado."); } catch (e) { $("#plu").select(); document.execCommand("copy"); toast("Link copiado."); }
+  });
+  $("#pln").addEventListener("click", e => { e.preventDefault(); portalModal(c, "new"); });
+  $("#plo").addEventListener("click", e => { e.preventDefault(); portalModal(c, "off"); });
+}
 
 start();

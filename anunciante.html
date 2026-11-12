@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#4A03B0">
+<meta property="og:title" content="Seu anúncio nas TVs START PLAY">
+<meta property="og:description" content="Exibições, telas e fotos da tela mostrando a sua arte, atualizadas a cada poucos minutos.">
+<title>Seu anúncio · START PLAY</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#F5F6F8;--card:#fff;--line:#E4E6EB;--text:#14161B;--muted:#646B78;--acc:#B3108F;--ok:#1F8F3A;--ok-soft:#E6F4EA;
+        --warn:#A8620B;--warn-soft:#FBF0E1;--gray-soft:#EEF0F3;--grad:linear-gradient(120deg,#E6037F,#4A03B0)}
+  body{background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .hero{background:var(--grad);color:#fff;padding:22px 18px 70px}
+  .hero .top{display:flex;align-items:center;gap:10px;max-width:960px;margin:0 auto}
+  .hero img{height:26px;width:auto}
+  .hero .tag{font-size:11px;font-weight:700;letter-spacing:.08em;background:rgba(255,255,255,.18);padding:3px 9px;border-radius:99px}
+  .hero h1{max-width:960px;margin:22px auto 4px;font-size:28px;line-height:1.15;font-weight:800}
+  .hero .sub{max-width:960px;margin:0 auto;opacity:.85;font-size:14px}
+  main{max-width:960px;margin:-50px auto 0;padding:0 14px 40px}
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:720px){.kpis{grid-template-columns:repeat(4,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(20,22,27,.04)}
+  .kpi{padding:14px}
+  .kpi .k{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .v{font-size:28px;font-weight:800;margin-top:2px;letter-spacing:-.01em}
+  .kpi .d{font-size:12px;color:var(--muted)}
+  h2{font-size:17px;margin:26px 2px 10px}
+  .pad{padding:16px}
+  .live{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;background:var(--ok-soft);color:var(--ok);border-radius:12px;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+  .live .dot{animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media (prefers-reduced-motion:reduce){.live .dot{animation:none}}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+  .bars .b{flex:1;background:var(--grad);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+  .bars .b.z{background:var(--gray-soft)}
+  .axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+  .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .shot img{width:100%;display:block;border-radius:10px 10px 0 0;background:#000;aspect-ratio:16/9;object-fit:contain}
+  .shot .c{padding:8px 10px;font-size:13px}
+  .ads{display:grid;gap:10px}
+  .ad{display:flex;gap:12px;padding:12px;align-items:flex-start}
+  .ad .th{width:112px;flex:none;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#111}
+  .ad .th img,.ad .th video{width:100%;height:100%;object-fit:cover;display:block}
+  .ad .t1{font-weight:700}
+  .ad .t2{font-size:13px;color:var(--muted)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--gray-soft);color:var(--muted);margin-top:6px}
+  .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
+  .scr{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .scr:last-child{border-bottom:0}
+  .scr .n{flex:1;min-width:0}
+  .scr .p{font-weight:700;white-space:nowrap}
+  .on{color:var(--ok)} .off{color:#B7BCC6}
+  .muted{color:var(--muted);font-size:13px}
+  .cta{margin-top:26px;background:var(--grad);color:#fff;border-radius:16px;padding:20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .cta b{font-size:18px;display:block}
+  .cta a{margin-left:auto;background:#fff;color:#4A03B0;font-weight:800;padding:11px 18px;border-radius:99px;text-decoration:none;white-space:nowrap}
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:22px}
+  .msg{max-width:480px;margin:60px auto;text-align:center;padding:28px}
+  .msg h3{font-size:20px;margin-bottom:8px}
+  .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite;margin:40px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="hero"><div class="top"><img src="logo.png" alt="START PLAY"><span class="tag">PAINEL DO ANUNCIANTE</span></div>
+  <h1 id="h">Seu anúncio nas TVs</h1><div class="sub" id="hs">Carregando…</div></div>
+<main id="app"><div class="card"><div class="spin"></div></div></main>
+<script src="config.js"></script>
+<script>
+(function(){
+  "use strict";
+  var CFG = window.STARTPLAY || window.SCREENFLOW || {};
+  var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
+  var TOKEN = (location.hash || "").replace(/^#/, "").trim();
+  var $ = function(id){ return document.getElementById(id) };
+  var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c] }) };
+  var nf = function(n){ return Math.round(Number(n) || 0).toLocaleString("pt-BR") };
+  var TZ = "America/Cuiaba";
+  var DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  function fmtDay(d){ return d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "" }
+  function fmtDate(d){ return d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4) : "" }
+  function fmtTime(ts){ return new Date(ts).toLocaleString("pt-BR", { timeZone:TZ, day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) }
+  function fmtDur(s){
+    s = Math.round(s || 0);
+    if(s < 60) return s + " s";
+    if(s < 3600) return Math.floor(s / 60) + " min";
+    var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+    return h + " h" + (m ? " " + m + " min" : "");
+  }
+  function wa(phone, text){
+    var d = String(phone || "").replace(/\D/g, ""); if(d && d.length <= 11) d = "55" + d;
+    return d ? "https://wa.me/" + d + "?text=" + encodeURIComponent(text) : null;
+  }
+  function daysTxt(days){
+    if(!days || !days.length || days.length === 7) return "todos os dias";
+    var k = days.slice().sort().join(",");
+    if(k === "1,2,3,4,5") return "seg a sex"; if(k === "1,2,3,4,5,6") return "seg a sáb"; if(k === "0,6") return "fins de semana";
+    return days.slice().sort().map(function(d){ return DIAS[d] }).join(", ");
+  }
+  var STATUS = { no_ar:["No ar", "ok"], agendado:["Agendado", "warn"], encerrado:["Encerrado", ""], pausado:["Pausado", ""] };
+
+  function fail(title, text, phone){
+    $("h").textContent = "Seu anúncio nas TVs"; $("hs").textContent = "";
+    var link = phone ? wa(phone, "Olá! Meu link de acompanhamento do anúncio não abriu. Pode me mandar um novo?") : null;
+    $("app").innerHTML = '<div class="card msg"><h3>' + esc(title) + '</h3><p class="muted">' + esc(text) + '</p>' +
+      (link ? '<p style="margin-top:16px"><a href="' + esc(link) + '" target="_blank" rel="noopener">Falar com a START PLAY no WhatsApp</a></p>' : "") + '</div>';
+  }
+
+  function render(d){
+    TZ = d.tz || TZ;
+    var co = d.company || {}, ct = d.contract || {};
+    document.title = d.client + " · START PLAY";
+    $("h").textContent = d.client;
+    $("hs").textContent = "Atualizado " + fmtTime(d.updated_at) + " · atualiza sozinho";
+    var daily = d.daily || [], ads = d.ads || [], scr = d.screens || [], shots = d.shots || [];
+    var today = daily.length ? daily[daily.length - 1] : { plays:0, seconds:0 };
+    var tot = daily.reduce(function(a, x){ a.p += +x.plays; a.s += +x.seconds; return a }, { p:0, s:0 });
+    var live = scr.filter(function(s){ return s.now });
+    var mx = Math.max.apply(null, [1].concat(daily.map(function(x){ return +x.plays })));
+    var avg = daily.length ? tot.p / daily.filter(function(x){ return +x.plays > 0 }).length || 0 : 0;
+    var h = '';
+    h += '<div class="kpis">' +
+      '<div class="card kpi"><div class="k">Exibições hoje</div><div class="v">' + nf(today.plays) + '</div><div class="d">até agora</div></div>' +
+      '<div class="card kpi"><div class="k">Últimos 30 dias</div><div class="v">' + nf(tot.p) + '</div><div class="d">' + (avg ? "média de " + nf(avg) + " por dia no ar" : "exibições concluídas") + '</div></div>' +
+      '<div class="card kpi"><div class="k">Tempo na tela</div><div class="v">' + esc(fmtDur(tot.s)) + '</div><div class="d">nos últimos 30 dias</div></div>' +
+      '<div class="card kpi"><div class="k">Telas</div><div class="v">' + nf(scr.length) + '</div><div class="d">' + nf(scr.filter(function(s){ return s.online }).length) + ' ligada(s) agora</div></div>' +
+      '</div>';
+    live.forEach(function(s){ h += '<div class="live"><span class="dot"></span>Passando agora: ' + esc(s.now) + ' · ' + esc(s.name) + '</div>' });
+
+    h += '<h2>Exibições por dia</h2><div class="card pad"><div class="bars" role="img" aria-label="Exibições por dia nos últimos 30 dias">' +
+      daily.map(function(x){ var v = +x.plays; return '<div class="b' + (v ? "" : " z") + '" title="' + fmtDay(x.day) + ': ' + nf(v) + ' exibições" style="height:' + Math.max(2, v / mx * 100) + '%"></div>' }).join("") +
+      '</div><div class="axis"><span>' + fmtDay((daily[0] || {}).day) + '</span><span>' + fmtDay((daily[Math.floor(daily.length / 2)] || {}).day) + '</span><span>hoje</span></div></div>';
+
+    if(shots.length){
+      h += '<h2>Sua arte na tela</h2><div class="shots">' + shots.map(function(s){
+        return '<div class="card shot"><img src="' + esc(s.img) + '" alt="Foto da tela mostrando ' + esc(s.what) + '"><div class="c"><b>' + esc(s.screen) + '</b><div class="muted">' + esc(fmtTime(s.at)) + ' · ' + esc(s.what) + '</div></div></div>';
+      }).join("") + '</div><p class="muted" style="margin:8px 2px 0">Imagens tiradas pela própria TV enquanto passava o seu anúncio.</p>';
+    }
+
+    h += '<h2>Seus anúncios</h2><div class="ads">' + (ads.length ? ads.map(function(a){
+      var st = STATUS[a.status] || ["", ""];
+      var th = a.kind === "video" ? '<video src="' + esc(a.url) + '#t=1" muted preload="metadata" playsinline></video>' : '<img src="' + esc(a.url) + '" alt="" loading="lazy">';
+      var when = (a.starts_on ? "de " + fmtDate(a.starts_on) + " " : "") + (a.ends_on ? "até " + fmtDate(a.ends_on) : (a.starts_on ? "sem data de fim" : ""));
+      var hours = a.from && a.to ? a.from + " às " + a.to : "o dia todo";
+      return '<div class="card ad"><div class="th">' + th + '</div><div><div class="t1">' + esc(a.title) + '</div>' +
+        '<div class="t2">' + esc(a.seconds) + ' s na tela · ' + esc(daysTxt(a.days)) + ' · ' + esc(hours) + (when ? " · " + esc(when) : "") + '</div>' +
+        '<div class="t2">' + esc((a.screens || []).join(", ") || "todas as telas") + '</div>' +
+        '<span class="chip ' + st[1] + '">' + esc(st[0]) + '</span></div></div>';
+    }).join("") : '<div class="card pad muted">Nenhum anúncio cadastrado ainda.</div>') + '</div>';
+
+    h += '<h2>Onde aparece</h2><div class="card">' + (scr.length ? scr.map(function(s){
+      return '<div class="scr"><span class="dot ' + (s.online ? "on" : "off") + '" title="' + (s.online ? "TV ligada agora" : "TV desligada agora") + '"></span>' +
+        '<div class="n"><b>' + esc(s.name) + '</b><div class="muted">' + (s.online ? "ligada agora" : "desligada agora (fora do expediente ou sem internet)") + '</div></div>' +
+        '<div class="p">' + nf(s.plays) + '<div class="muted" style="font-weight:400;text-align:right">30 dias</div></div></div>';
+    }).join("") : '<div class="pad muted">Nenhuma tela ainda.</div>') + '</div>';
+
+    var plan = [];
+    if(ct.ads) plan.push(ct.ads + " anúncio(s) de " + ct.seconds + " s");
+    if(ct.daily) plan.push(nf(ct.daily) + " inserções por dia em cada tela");
+    if(ct.screens) plan.push(ct.screens + " tela(s)");
+    h += '<h2>Seu plano</h2><div class="card pad">' + esc(plan.join(" · ") || "—") +
+      '<div class="muted" style="margin-top:4px">Contrato de ' + fmtDate(ct.start) + ' a ' + fmtDate(ct.end) + (d.active ? "" : " · encerrado") + '</div></div>';
+
+    var more = wa(co.phone, "Olá! Sou da " + d.client + " e quero colocar meu anúncio em mais telas da " + (co.name || "START PLAY") + ".");
+    if(more) h += '<div class="cta"><div><b>Quer aparecer em mais telas?</b>Fale com a ' + esc(co.name || "START PLAY") + ' e aumente o seu alcance.</div><a href="' + esc(more) + '" target="_blank" rel="noopener">Falar no WhatsApp</a></div>';
+    h += '<div class="foot">' + esc(co.name || "START PLAY") + ' · mídia indoor' + (co.city ? " · " + esc(co.city) : "") + '<br>As exibições são registradas pela própria TV, mesmo sem internet.</div>';
+    $("app").innerHTML = h;
+  }
+
+  function load(first){
+    if(!TOKEN || !/^[0-9a-f-]{36}$/i.test(TOKEN)){ fail("Link incompleto", "Abra o endereço completo que a START PLAY mandou para você."); return }
+    fetch(BASE + "/rest/v1/rpc/sf_portal", { method:"POST", headers:{ "apikey":CFG.supabaseKey, "Authorization":"Bearer " + CFG.supabaseKey, "Content-Type":"application/json" },
+      body:JSON.stringify({ p_token:TOKEN }) })
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json() })
+      .then(function(d){ if(!d) fail("Link desligado", "Este link não vale mais. Peça um novo para a START PLAY."); else render(d) })
+      ["catch"](function(){ if(first) fail("Sem conexão", "Não consegui carregar agora. Confira a internet e tente de novo em instantes.") });
+  }
+  load(true);
+  setInterval(function(){ if(!document.hidden) load(false) }, 5 * 60000);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) load(false) });
+  window.addEventListener("hashchange", function(){ TOKEN = (location.hash || "").replace(/^#/, "").trim(); load(true) });
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /* START PLAY — deixa o player abrir mesmo sem internet (usa a última versão baixada).
    Sempre tenta a rede primeiro; o cache só entra quando a rede falha ou demora. */
 var SHELL = "sp-shell-v1";
-var FILES = ["./", "index.html", "config.js", "agenda.js", "cartoes.js", "jpeg-decoder.js", "logo.png"];
+var FILES = ["./", "index.html", "config.js", "agenda.js", "cartoes.js", "jpeg-decoder.js", "qrcode.js", "logo.png"];
 
 self.addEventListener("install", function(e){
   e.waitUntil(caches.open(SHELL).then(function(c){ return c.addAll(FILES) })["catch"](function(){}).then(function(){ return self.skipWaiting() }));
@@ -12,7 +12,7 @@ self.addEventListener("fetch", function(e){
   var req = e.request, u = new URL(req.url);
   if(req.method !== "GET" || u.origin !== self.location.origin) return;       // Supabase e mídias: o player cuida
   var path = u.pathname;
-  if(/version\.txt$|\.apk$|painel|conversor|vendor\/|sw\.js$/.test(path)) return;                // sempre direto da rede
+  if(/version\.txt$|\.apk$|painel|conversor|anunciante|vendor\/|sw\.js$/.test(path)) return;                // sempre direto da rede
   e.respondWith(networkFirst(req, u));
 });
 

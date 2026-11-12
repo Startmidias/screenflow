@@ -369,8 +369,10 @@ PAGES.inicio = async function pageInicio() {
   try {
     await need("screens", "media", "clients", "payments", "receipts", "exceptions", "sources", "version", "shots");
     const t = today();
-    const { data, error } = await sb.rpc("sf_plays_daily", { p_from: startOf(addDays(t, -13)).toISOString(), p_to: startOf(addDays(t, 1)).toISOString() });
-    if (error) throw error; daily = data || [];
+    const [{ data, error }, stor] = await Promise.all([
+      sb.rpc("sf_plays_daily", { p_from: startOf(addDays(t, -13)).toISOString(), p_to: startOf(addDays(t, 1)).toISOString() }),
+      sb.rpc("sf_storage_status").then(r => r.data || null, () => null)]);
+    if (error) throw error; daily = data || []; state.storage = stor;
   } catch (e) { pageError(e); return; }
   if (state.tab !== "inicio") return;
   const t = today(), main = $("#main");
@@ -396,6 +398,12 @@ PAGES.inicio = async function pageInicio() {
   state.sources.filter(x => x.enabled && x.last_error && (!x.ok_at || Date.now() - new Date(x.ok_at) > 3600e3)).forEach(x => al.push(["", `Notícias: ${x.name} · ${x.section} sem atualizar`, `${x.last_error}. As TVs seguem com os outros portais.`, "#ajustes"]));
   const pending = state.screens.filter(s => !isAdded(s) && s.last_seen && Date.now() - new Date(s.last_seen) < 24 * 3600e3);
   if (pending.length) al.push(["acc", `${pending.length} TV(s) aguardando pareamento`, `Código: ${pending.map(codeOf).join(", ")}`, "#telas"]);
+  // espaço do plano gratuito do Supabase e cópia de segurança do mês
+  const so = state.storage;
+  if (so && so.db_limit && so.db_bytes / so.db_limit > 0.7) al.push(["warn", `Banco de dados ${Math.round(so.db_bytes / so.db_limit * 100)}% ocupado`, "Diminua o prazo do registro linha a linha em Ajustes → Espaço, ou passe o Supabase para o plano Pro.", "#ajustes/copia"]);
+  if (so && so.files && so.files_limit && so.files.bytes / so.files_limit > 0.7) al.push(["warn", `Fotos e vídeos ocupam ${Math.round(so.files.bytes / so.files_limit * 100)}% do espaço`, "Apague anúncios antigos que não vão voltar ao ar.", "#anuncios"]);
+  const bkAt = state.settings.backup_at;
+  if (so && (!bkAt || Date.now() - new Date(bkAt) > 30 * 86400e3)) al.push(["", "Cópia de segurança do mês", (bkAt ? `A última foi baixada ${ago(bkAt)}.` : "Você ainda não baixou nenhuma cópia dos dados.") + " Leva 5 segundos: Ajustes → Baixar cópia completa. Guarde no Google Drive.", "#ajustes/copia"]);
 
   const days14 = Array.from({ length: 14 }, (_, i) => addDays(t, i - 13));
   const max = Math.max(1, ...days14.map(d => Number(byDay[d]?.plays || 0)));
