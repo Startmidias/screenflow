@@ -9,6 +9,7 @@ const waLink = (phone, text) => { let d = digits(phone); if (d && d.length <= 11
 function parseMoney(s) {
   s = String(s ?? "").trim().replace(/[^\d,.-]/g, "");
   if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");   // "1.500" = mil e quinhentos
   const v = Number(s); return isFinite(v) ? Math.round(v * 100) / 100 : NaN;
 }
 const moneyIn = v => (Number(v) || 0).toFixed(2).replace(".", ",");
@@ -136,7 +137,7 @@ function clientForm(c) {
       else {
         const { data, error } = await sb.from("clients").insert(row).select().single(); if (error) throw error; id = data.id;
         // anúncios antigos com o mesmo anunciante passam a ser deste cliente
-        await sb.from("media").update({ client_id: id }).is("client_id", null).ilike("advertiser", row.name);
+        await sb.from("media").update({ client_id: id }).is("client_id", null).ilike("advertiser", row.name.replace(/[\\%_]/g, "\\$&"));
       }
       if (contractChanged) { const { error } = await sb.rpc("sf_client_schedule", { p_client: id }); if (error) throw error; }
       closeModal(); toast(edit ? "Cliente salvo." + (contractChanged ? " Parcelas em aberto atualizadas." : "") : "Cliente cadastrado e parcelas geradas.");
@@ -148,7 +149,7 @@ function clientForm(c) {
 // extrato do cliente: parcelas, recebimentos e saldo
 async function statementModal(c) {
   await need("payments", "receipts");
-  const f = clientFin(c), t = today(), st = state.settings;
+  const f = clientFin(c), t = today();
   const recs = state.receipts.filter(r => r.client_id === c.id);
   modal(`<h2>Financeiro · ${esc(c.name)}</h2>
     <div class="kpis"><div class="card kpi"><div class="k">Contrato</div><div class="v">${money(f.total)}</div><div class="d">${f.ps.length} parcela(s)</div></div>
@@ -326,7 +327,8 @@ PAGES.relatorio = async function pageReport(arg) {
   }
   $("#csv").addEventListener("click", async () => {
     if (!data) return;
-    const { data: lg } = await sb.rpc("sf_play_log", { ...data.args, p_limit: 20000 });
+    let lg;
+    try { lg = await rpcAll("sf_play_log", data.args, 20000); } catch (ex) { toast(friendly(ex), 5000); return; }
     if (!lg || !lg.length) { toast("Nada para copiar nesse período"); return; }
     const lines = [["Data", "Hora", "Unidade", "Tela", "Anúncio", "Anunciante", "Duração (s)", "Resultado", "Sem internet"].join("\t")]
       .concat(lg.map(l => { const d = new Date(l.played_at); return [d.toLocaleDateString("pt-BR", { timeZone: tz() }), d.toLocaleTimeString("pt-BR", { timeZone: tz() }), l.screen_location || "", l.screen_name, l.title, l.advertiser || "", l.seconds, l.status === "ok" ? "concluída" : l.status === "failed" ? "falhou" : "interrompida", l.offline ? "sim" : ""].join("\t"); }));
@@ -369,7 +371,7 @@ async function buildPdf(D) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const st = state.settings, W = 210, M = 14, ACC = [179, 16, 143];
   const who = D.client ? D.client.name : "Todos os clientes";
-  const { data: lg } = await sb.rpc("sf_play_log", { ...D.args, p_limit: 2000 });
+  const lg = await rpcAll("sf_play_log", D.args, 2000);
   const hdr = await headerImage();
   doc.addImage(hdr, "JPEG", 0, 0, W, 26);
   doc.setTextColor(20); doc.setFont("helvetica", "bold"); doc.setFontSize(17);

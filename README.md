@@ -8,7 +8,7 @@ O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link.
 
 | Pasta / arquivo | O que é |
 |---|---|
-| `index.html` | Player da TV 3.2: anúncios em tela cheia e em loop, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição |
+| `index.html` | Player da TV 3.2.1: anúncios em tela cheia e em loop, cartões de clima/cotação/futebol entre os anúncios, miniatura da tela para o painel, rodapé com notícias e chamada comercial, expediente, funciona sem internet e registra cada exibição |
 | `agenda.js` | Regras de horário compartilhadas pelo player e pelo painel (expediente, virada da meia-noite, feriados, dias e horários dos anúncios, estimativa de inserções) |
 | `sw.js` | Guarda o player no aparelho para abrir mesmo sem internet |
 | `jpeg-decoder.js` | Plano B para fotos que o TV Box não consegue abrir sozinho (jpeg-js, licença BSD-3) |
@@ -19,7 +19,7 @@ O endereço ainda usa `/screenflow/` porque as TVs já pareadas abrem esse link.
 | `vendor/` | Bibliotecas usadas pelo painel (Supabase, jsPDF); em `vendor/conv/`, as do conversor (carregadas só quando precisa; ver `LICENCAS.txt`); em `vendor/fonts/`, as fontes do criador de artes (OFL) |
 | `config.js` | Endereço do Supabase e chave pública (anon). A segurança fica nas regras do banco |
 | `supabase/instalar.sql` | Instalação do banco (rodar no SQL Editor do Supabase) |
-| `supabase/atualizacao-02.sql` … `05.sql` | Atualizações, em ordem. Cada uma pode ser rodada de novo sem estragar nada. A 05 liga o pg_cron/pg_net: a cada minuto o banco confere as TVs (aviso de TV fora do ar por WhatsApp/e-mail) e busca clima, cotação e futebol |
+| `supabase/atualizacao-02.sql` … `07.sql` | Atualizações, em ordem. Cada uma pode ser rodada de novo sem estragar nada. A 05 liga o pg_cron/pg_net: a cada minuto o banco confere as TVs (aviso de TV fora do ar por WhatsApp/e-mail) e busca clima, cotação e futebol. A 06 traz a cotação reserva (Banco Central Europeu). A 07 fecha as funções internas para a internet e limpa sozinha, de hora em hora, aparelhos nunca pareados |
 | `supabase/functions/noticias/` | Função que busca os feeds de notícias, limpa e entrega as manchetes às TVs |
 | `startplay.apk` | App START PLAY para TV Box (tela inicial em modo quiosque) |
 | `app-tv/` | Código do app da TV (smali + interface em HTML) e o script de build |

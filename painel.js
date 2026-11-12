@@ -94,6 +94,18 @@ function friendly(e) {
   if (/Failed to fetch|NetworkError/i.test(m)) return "Sem conexão. Confira a internet e tente de novo.";
   return m;
 }
+// o Supabase devolve no máximo 1.000 linhas por chamada: busca em páginas até o limite pedido
+async function rpcAll(fn, args, limit) {
+  const out = [], page = 1000;
+  while (out.length < limit) {
+    const n = Math.min(page, limit - out.length);
+    const { data, error } = await sb.rpc(fn, { ...args, p_limit: n, p_offset: out.length });
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < n) break;
+  }
+  return out;
+}
 async function token() { const { data } = await sb.auth.getSession(); return data.session && data.session.access_token; }
 
 // ---------------------------------------------------------------------------
@@ -722,7 +734,9 @@ async function historyModal(s) {
   const t = today();
   const [ev, fails] = await Promise.all([
     q("screen_events", "*", r => r.eq("screen_id", s.id).order("at", { ascending: false }).limit(80)),
-    sb.rpc("sf_play_log", { p_from: startOf(addDays(t, -6)).toISOString(), p_to: startOf(addDays(t, 1)).toISOString(), p_screen: s.id, p_limit: 3000 }).then(r => (r.data || []).filter(x => x.status !== "ok"))
+    q("plays", "played_at,status,detail,media_id,media_title", r => r.eq("screen_id", s.id).neq("status", "ok")
+      .gte("played_at", startOf(addDays(t, -6)).toISOString()).order("played_at", { ascending: false }).limit(150))
+      .then(rows => rows.map(x => ({ ...x, title: (state.media.find(m => m.id === x.media_id) || {}).title || x.media_title || "(anúncio apagado)" })))
   ]).catch(e => { $("#hx").innerHTML = `<div class="err-box">${esc(friendly(e))}</div>`; return [null, null]; });
   if (!ev) return;
   const sx = s.status || {}, inf = s.info || {};
@@ -1282,7 +1296,11 @@ function modal(html, size) {
   const root = $("#modal-root");
   root.innerHTML = `<div class="modal-bg"><div class="modal ${size || ""}" role="dialog" aria-modal="true">${html}</div></div>`;
   root.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeModal));
-  root.querySelector(".modal-bg").addEventListener("mousedown", e => { if (e.target.classList.contains("modal-bg")) closeModal(); });
+  root.querySelector(".modal-bg").addEventListener("mousedown", e => {
+    if (!e.target.classList.contains("modal-bg")) return;
+    if (root.querySelector("form, input, textarea, select, canvas")) return;   // tem algo sendo preenchido: só fecha pelos botões
+    closeModal();
+  });
   const f = root.querySelector("input:not([type=hidden]):not(.hide):not([type=checkbox]), select, button"); f && f.focus();
 }
 function closeModal() { $("#modal-root").innerHTML = ""; window.onmessage = null; }

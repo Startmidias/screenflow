@@ -110,12 +110,12 @@
 </div>
 
 <script src="config.js"></script>
-<script src="agenda.js"></script>
-<script src="cartoes.js"></script>
+<script src="agenda.js?v=3.2.1"></script>
+<script src="cartoes.js?v=3.2.1"></script>
 <script>
 (function(){
   "use strict";
-  var VERSION = "3.2.0";
+  var VERSION = "3.2.1";
   var CFG = window.STARTPLAY || window.SCREENFLOW || {};
   var A = window.SPAgenda;
   var BASE = String(CFG.supabaseUrl || "").replace(/\/$/, "");
@@ -130,7 +130,7 @@
   var S = { id:null, name:"", cfg:null, items:[], prog:null, key:null, pend:null, idx:-1, layer:0, timer:null, cur:null, started:0,
             online:true, offlineSince:null, muted:false, skips:0, ok:0, err:0, lastErr:"", lastErrAt:null, boot:Date.now(),
             token:0, skew:0, sleeping:false, override:null, ovNews:null, cfgKey:"", failAt:{},
-            sinceCard:0, cardIdx:0, card:null, cards:0, shotAt:0 };
+            sinceCard:0, cardIdx:0, card:null, cards:0, shotAt:0, reloadDue:false };
   var T = { items:[], at:0, ids:"", timer:null, k:0, plan:null, seg:null, segTimer:null, els:[], nextAt:0, pump:null,
             paused:false, pauseAt:0, err:null };
   var G = { W:0, H:0, RW:0, RH:0, rem:30, bh:0, rot:0 };
@@ -176,7 +176,9 @@
     S.id = ls("sf_screen");
     if(!S.id){
       var c = "abcdefghjkmnpqrstuvwxyz23456789", r = "tv-";
-      for(var i = 0; i < 12; i++) r += c.charAt(Math.floor(Math.random() * c.length));
+      var rnd = new Uint8Array(12);
+      try { crypto.getRandomValues(rnd) } catch(e){ for(var j = 0; j < 12; j++) rnd[j] = Math.floor(Math.random() * 256) }
+      for(var i = 0; i < 12; i++) r += c.charAt(rnd[i] % c.length);
       S.id = r; ls("sf_screen", r);
     }
   }
@@ -384,7 +386,7 @@
     if(!PREVIEW && !restored) ls("sf_last", JSON.stringify({ cfg:S.cfg, items:p.items, prog:p.prog, key:S.key, skew:S.skew, at:Date.now() }));
     if(!restored) cleanCache(p.items);
     if(S.sleeping) return;
-    if(!S.cur) next();
+    if(!S.cur && !S.card) next();
     // se já há um anúncio passando, a troca acontece no fim dele
   }
   function downloadAll(p){
@@ -627,7 +629,7 @@
   // ---------- reprodução ----------
   function clearLayer(L){ L.innerHTML = ""; if(L._url){ URL.revokeObjectURL(L._url); L._url = null } }
   function stop(){
-    clearTimeout(S.timer); S.timer = null; S.cur = null; S.token++;
+    clearTimeout(S.timer); S.timer = null; S.cur = null; S.card = null; S.token++;
     for(var i = 0; i < 2; i++){ var L = $("L" + i); L.className = "layer"; clearLayer(L) }
   }
 
@@ -782,7 +784,9 @@
 
   function next(){
     clearTimeout(S.timer);
+    S.card = null;
     if(S.sleeping) return;
+    if(S.reloadDue && !PREVIEW){ interrupt("recarga diária"); location.reload(); return }
     if(!S.items.length || (S.cfg && scr().added === false && !PREVIEW)){ stop(); if(S.cfg) idle(); return }
     if(cardDue()){ playCard(); return }
     // próximo anúncio que pode passar agora (vigência, dia da semana e horário)
@@ -989,7 +993,10 @@
     setTimeout(sendShot, 30000);
     setInterval(sendShot, 5 * 60000);
     // recarrega a página uma vez por dia de madrugada (libera memória)
-    setInterval(function(){ var p = parts(); if(p.min >= 240 && p.min < 242 && Date.now() - S.boot > 3600000 && !S.cur) location.reload() }, 60000);
+    setInterval(function(){
+      var p = parts();
+      if(p.min >= 240 && p.min < 242 && Date.now() - S.boot > 3600000){ if(S.cur || S.card) S.reloadDue = true; else location.reload() }
+    }, 60000);
   }
   window.addEventListener("online", function(){ sync(false) });
   window.StartPlay = window.ScreenFlowPlayer = { state:S, news:T, media:M, geo:function(){ return G }, sync:sync, next:next,

@@ -283,7 +283,7 @@
     var x = m, w = W - 2 * m, y = m;
     if (foto && !v) { var fw = W * 0.34; cover(g, foto, W - m - fw, m, fw, H - 2 * m, 4 * u); w = W - 3 * m - fw; }
     if (foto && v) { cover(g, foto, m, m, W - 2 * m, H * 0.26, 4 * u); y = m + H * 0.26 + 3 * u; }
-    if (logo) { var lg = contain(g, logo, x, y, (v ? 28 : 20) * u, 10 * u, "left"); y += 12 * u; }
+    if (logo) { contain(g, logo, x, y, (v ? 28 : 20) * u, 10 * u, "left"); y += 12 * u; }
     if (d.selo) { var pl = pill(g, d.selo.toUpperCase(), x, y, 3.2 * u, P.acc, P.accT); y += pl.h + 2 * u; }
     var tf = fit(g, d.titulo || "", TITLE, 400, w, (v ? 12 : 10) * u, 5 * u, 2, 1.0);
     y = lines(g, tf, TITLE, 400, x, y, P.txt) + 1 * u;
@@ -318,7 +318,6 @@
       else { g.fillStyle = hexA(P.acc, 0.9); g.beginPath(); g.arc(cx, fy, r + 1.2 * u, 0, 7); g.fill(); g.save(); g.beginPath(); g.arc(cx, fy, r, 0, 7); g.clip(); cover(g, foto, cx - r, fy - r, 2 * r, 2 * r); g.restore(); y = fy + r + 4 * u; }
     }
     var tw = (foto && !v) ? W - 2 * m - H * 0.44 - 4 * u : W - 2 * m, tcx = (foto && !v) ? m + tw / 2 : cx;
-    var blocks = [];
     var sf = d.subtitulo ? fit(g, d.subtitulo, BODY, 500, tw, (v ? 4.4 : 4) * u, 2.4 * u, 3, 1.3) : null;
     var tf = fit(g, d.titulo || "", TITLE, 400, tw, (v ? 17 : 16) * u, 6 * u, 3, 1.0, (bottom - y) * 0.55);
     var seloH = d.selo ? 6.5 * u : 0, infoH = d.info ? 9 * u : 0;
